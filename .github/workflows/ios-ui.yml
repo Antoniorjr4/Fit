@@ -1,0 +1,61 @@
+name: FitLambda - native UI validation
+
+# Validate UI changes on pull requests; manual runs remain available after merge.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - 'scripts/build-ui-macos.sh'
+      - '.github/workflows/ios-ui.yml'
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      capture_screenshot:
+        description: Open the UI in an available iPhone simulator and capture it
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fitlambda-ui-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ui:
+    runs-on: macos-15
+    timeout-minutes: 25
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      CAPTURE_SCREENSHOT: ${{ (github.event_name != 'workflow_dispatch' || inputs.capture_screenshot) && '1' || '0' }}
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Record Xcode and simulator availability
+        run: |
+          xcodebuild -version
+          xcrun simctl list devices available
+      - name: Install XcodeGen if needed
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+      - name: Build the native interface
+        run: bash scripts/build-ui-macos.sh
+      - name: Save build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FitLambda-native-ui-${{ github.run_number }}
+          path: build/ui-evidence/
+          if-no-files-found: warn
+          retention-days: 7
+
+# This produces a simulator .app, build logs and optionally a screenshot.
+# It does not sign an iPhone IPA, upload to TestFlight or contact a Fit3.
