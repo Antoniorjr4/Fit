@@ -386,7 +386,7 @@ final class InterfaceJourneyTests: XCTestCase {
             let top = nav.exists && nav.isHittable ? nav.frame.maxY + 8 : app.frame.minY + 54
             var bottom = tabs.exists && tabs.isHittable ? tabs.frame.minY - 8 : app.frame.maxY - 28
             let languageSave = app.buttons["language.save"]
-            if target.identifier != "language.save" && languageSave.exists && languageSave.isHittable {
+            if languageSave.exists && languageSave.isHittable && (!target.exists || target.identifier != "language.save") {
                 bottom = min(bottom, languageSave.frame.minY - 8)
             }
             if target.exists && target.isHittable && target.frame.minY >= top && target.frame.maxY <= bottom {
