@@ -8,7 +8,7 @@ O design usa grafite, verde-lima e um modo claro em branco suave. A primeira eta
 
 - Prévia web navegável e identidade visual aprovadas.
 - Base SwiftUI para iOS 17 ou posterior.
-- Compilação e abertura em simulador de iPhone pelo GitHub Actions, sem Mac local.
+- Compilação e abertura em simulador de iPhone confirmadas pelo GitHub Actions, sem Mac local: [primeiro build aprovado](https://github.com/Antoniorjr4/Fit/actions/runs/43778584651).
 - Bluetooth, sincronização com a Fit3, HealthKit e envio de mostradores ainda não implementados.
 - O artefato de simulador não é uma IPA instalável no iPhone.
 
@@ -24,7 +24,7 @@ Após a execução, abra o run em **Actions** e baixe `FitLambda-native-ui-<núm
 - `FitLambda-simulator.zip`: aplicativo para simulador.
 - `environment.txt`: Xcode, XcodeGen e commit utilizados.
 
-A primeira execução em macOS é a confirmação de compilação. Conferência de YAML ou da prévia web não substitui esse resultado.
+A primeira execução em macOS passou em 16/11/2026 (UTC), com Xcode 16.4. O app foi compilado, instalado e aberto no simulador. A captura da tela Hoje foi conferida visualmente. Consulte [o registro da validação e a imagem nativa](docs/validation/native-ui-2026-11-16.md).
 
 O job usa runner padrão `macos-15`, limite de 25 minutos e retenção de artefatos por 7 dias. Não usa certificados ou segredos de assinatura e não publica no TestFlight ou na App Store.
 

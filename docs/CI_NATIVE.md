@@ -2,6 +2,10 @@
 
 Frente de interface do FitΛ. Repositório: `Antoniorjr4/Fit`.
 
+## Resultado confirmado
+
+O [primeiro run](https://github.com/Antoniorjr4/Fit/actions/runs/43778584651) concluiu com sucesso em 16/11/2026 (UTC): compilação, instalação, abertura e captura nativa. O [registro de validação](validation/native-ui-2026-11-16.md) preserva a evidência e delimita o que foi conferido.
+
 ## Resultado esperado
 
 1. Gerar um projeto Xcode a partir de `ios/project.yml`.
