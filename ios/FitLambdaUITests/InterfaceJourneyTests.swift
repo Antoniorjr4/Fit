@@ -347,7 +347,17 @@ final class InterfaceJourneyTests: XCTestCase {
         selectTab(3, title: "profile.title")
         tap("scenarios.open")
         expectSheet("scenarios")
-        tap("scenario.\(code)")
+        let target = app.buttons["scenario.\(code)"]
+        let scroll = app.scrollViews["sheet.scroll"]
+        XCTAssertTrue(scroll.waitForExistence(timeout: 5))
+        for _ in 0..<8 {
+            if target.exists && target.isHittable && scroll.frame.contains(target.frame) {
+                break
+            }
+            scroll.swipeUp()
+        }
+        XCTAssertTrue(target.exists && target.isHittable, "Scenario is unreachable: \(code)")
+        target.tap()
         expectClosedSheet()
         selectTab(0, title: "today.greeting")
     }

@@ -30,7 +30,9 @@ struct FitLambdaRoot: View {
             Group {
                 switch item {
                 case .language: LanguagePickerScreen(isFirstLaunch: false)
-                case .scenarios: ScenarioPickerScreen()
+                case .scenarios:
+                    ScenarioPickerScreen()
+                        .interactiveDismissDisabled()
                 case .permissions: PermissionsScreen()
                 default: FitDetailSheet(kind: item)
                 }
