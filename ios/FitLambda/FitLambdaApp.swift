@@ -7,6 +7,7 @@ struct FitLambdaApp: App {
         WindowGroup {
             FitLambdaRoot()
                 .environmentObject(demo)
+                .environment(\.locale, Locale(identifier: "pt_BR"))
                 .preferredColorScheme(demo.isDark ? .dark : .light)
                 .modifier(PreviewTextSize())
         }

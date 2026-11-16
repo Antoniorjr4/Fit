@@ -69,9 +69,10 @@ struct Kicker: View {
 }
 
 struct DemoNote: View {
+    @Environment(\.colorScheme) private var scheme
     var body: some View {
         Text("Prévia visual · dados fictícios.\nBluetooth e Apple Saúde ainda não integrados.")
-            .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            .font(.caption).foregroundStyle(Palette(scheme).muted).multilineTextAlignment(.center)
             .frame(maxWidth: .infinity).padding(.top, 8)
     }
 }
@@ -221,6 +222,7 @@ struct ActivityArc: View {
 }
 
 struct Stat: View {
+    @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var textSize
     let value: String
     let unit: String
@@ -228,13 +230,14 @@ struct Stat: View {
     var body: some View {
         VStack(alignment: textSize.isAccessibilitySize ? .leading : .center, spacing: 7) {
             (Text(value).font(.title3.weight(.semibold)) + Text(" \(unit)").font(.caption2))
-            Text(label).font(.caption2).foregroundStyle(.secondary)
+            Text(label).font(.caption2).foregroundStyle(Palette(scheme).muted)
         }.frame(maxWidth: .infinity, alignment: textSize.isAccessibilitySize ? .leading : .center)
             .accessibilityElement(children: .combine)
     }
 }
 
 struct VitalTile: View {
+    @Environment(\.colorScheme) private var scheme
     let title: String
     let value: String
     let unit: String
@@ -248,7 +251,7 @@ struct VitalTile: View {
                 Label(title, systemImage: symbol).font(.caption).foregroundStyle(color)
                 (Text(value).font(.title.weight(.medium)) + Text(" \(unit)").font(.caption))
                     .fixedSize(horizontal: false, vertical: true)
-                Text(detail).font(.caption2).foregroundStyle(.secondary)
+                Text(detail).font(.caption2).foregroundStyle(Palette(scheme).muted)
                 HStack(alignment: .center, spacing: 4) {
                     ForEach(0..<15) { i in Capsule().fill(color.opacity(i % 3 == 0 ? 0.4 : 0.8)).frame(height: CGFloat(8 + (i * 7) % 21)) }
                 }.frame(height: 29).accessibilityHidden(true)
@@ -292,10 +295,32 @@ struct TrendsScreen: View {
                 } else {
                     Chart(data) { day in
                         BarMark(x: .value("Período", day.day), y: .value("Passos", day.steps))
-                            .foregroundStyle(p.accent.opacity(day.day == data.last?.day ? 1 : 0.4))
+                            .foregroundStyle(p.accent.opacity(day.day == data.last?.day ? 1 : 0.75))
                             .cornerRadius(5)
                             .accessibilityLabel("\(day.day), \(day.steps) passos")
-                    }.chartYScale(domain: 0...12000).frame(height: 210)
+                    }
+                    .chartYScale(domain: 0...12000)
+                    .chartXAxis {
+                        AxisMarks(values: .automatic) { value in
+                            AxisGridLine()
+                            AxisValueLabel {
+                                if let day = value.as(String.self) {
+                                    Text(day).foregroundStyle(p.muted)
+                                }
+                            }
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks(values: .automatic) { value in
+                            AxisGridLine()
+                            AxisValueLabel {
+                                if let steps = value.as(Int.self) {
+                                    Text(DemoStore.number(steps)).foregroundStyle(p.muted)
+                                }
+                            }
+                        }
+                    }
+                    .frame(height: 210)
                 }
             }
             Text("Um olhar mais de perto.").font(.headline)
@@ -335,17 +360,18 @@ struct BandIllustration: View {
 
 struct BandScreen: View {
     @EnvironmentObject private var demo: DemoStore
+    @Environment(\.colorScheme) private var scheme
     @Binding var sheet: FitSheet?
     var body: some View {
         Page {
             Kicker(text: "SEMPRE COM VOCÊ")
             Text("Sua Fit.").font(.largeTitle.weight(.semibold)).tracking(-1.2)
                 .accessibilityIdentifier("band.title")
-            Text("Pequena no pulso. Parte do seu dia.").font(.subheadline).foregroundStyle(.secondary)
+            Text("Pequena no pulso. Parte do seu dia.").font(.subheadline).foregroundStyle(Palette(scheme).muted)
             BandIllustration(face: demo.face).frame(maxWidth: .infinity)
             VStack(spacing: 8) {
                 Text("Galaxy Fit3").font(.title2.weight(.semibold))
-                Text(demo.connectionPreview ? "Conexão simulada · modo demonstração" : "Pronta para fazer parte do seu ritmo.").font(.caption).foregroundStyle(.secondary)
+                Text(demo.connectionPreview ? "Conexão simulada · modo demonstração" : "Pronta para fazer parte do seu ritmo.").font(.caption).foregroundStyle(Palette(scheme).muted)
                     .accessibilityIdentifier("band.status")
                 Label("78% de bateria · exemplo", systemImage: "battery.75percent").font(.caption)
             }.frame(maxWidth: .infinity)
@@ -364,18 +390,20 @@ struct BandScreen: View {
 }
 
 struct RowLabel: View {
+    @Environment(\.colorScheme) private var scheme
     let title: String
     let symbol: String
     var body: some View {
         HStack(spacing: 12) {
             Label(title, systemImage: symbol); Spacer()
-            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
+            Image(systemName: "chevron.right").font(.caption).foregroundStyle(Palette(scheme).muted)
         }.font(.subheadline).frame(minHeight: 44).contentShape(Rectangle())
     }
 }
 
 struct ProfileScreen: View {
     @EnvironmentObject private var demo: DemoStore
+    @Environment(\.colorScheme) private var scheme
     @Binding var sheet: FitSheet?
     var body: some View {
         Page {
@@ -387,7 +415,7 @@ struct ProfileScreen: View {
                     Image(systemName: "person.crop.circle.fill").font(.system(size: 54))
                     VStack(alignment: .leading, spacing: 7) {
                         Text(demo.name).font(.title2.weight(.semibold))
-                        Text("Seu ritmo. Suas escolhas.").font(.caption).foregroundStyle(.secondary)
+                        Text("Seu ritmo. Suas escolhas.").font(.caption).foregroundStyle(Palette(scheme).muted)
                     }
                     Spacer(); Image(systemName: "pencil")
                 }
@@ -402,7 +430,7 @@ struct ProfileScreen: View {
                 Divider()
                 Toggle("Prévia de lembretes", isOn: $demo.reminders)
                     .accessibilityIdentifier("profile.reminders")
-                Text("Demonstração visual. Nenhum lembrete é enviado.").font(.caption).foregroundStyle(.secondary)
+                Text("Demonstração visual. Nenhum lembrete é enviado.").font(.caption).foregroundStyle(Palette(scheme).muted)
             }.buttonStyle(.plain).font(.subheadline)
             Kicker(text: "SEUS DADOS")
             Card {
@@ -415,7 +443,7 @@ struct ProfileScreen: View {
                 Button { sheet = .welcome } label: { RowLabel(title: "Rever boas-vindas", symbol: "sparkles") }
                     .accessibilityIdentifier("welcome.open")
             }.buttonStyle(.plain)
-            Text("FitΛ\nDesign preview 0.3.0").font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: .infinity)
+            Text("FitΛ\nDesign preview 0.3.0").font(.caption).foregroundStyle(Palette(scheme).muted).multilineTextAlignment(.center).frame(maxWidth: .infinity)
             DemoNote()
         }
     }
