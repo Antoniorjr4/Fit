@@ -407,8 +407,13 @@ final class InterfaceJourneyTests: XCTestCase {
             if languageSave.exists && languageSave.isHittable && (!target.exists || target.identifier != "language.save") {
                 bottom = min(bottom, languageSave.frame.minY - 8)
             }
-            if target.exists && target.isHittable && target.frame.minY >= top && target.frame.maxY <= bottom {
-                return
+            if target.exists && target.isHittable {
+                // The language picker pins this action to the safe-area footer.
+                // The bounds below apply to content that scrolls behind it.
+                if target.identifier == "language.save" ||
+                    (target.frame.minY >= top && target.frame.maxY <= bottom) {
+                    return
+                }
             }
             // SwiftUI may report a partly covered button as hittable. Move its
             // entire frame into the content area before tapping, above the tab bar.
