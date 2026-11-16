@@ -37,7 +37,7 @@ struct SheetFrame<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
         NavigationStack {
-            Page {
+            Page(scrollID: "sheet.scroll") {
                 Text(title).font(.largeTitle.weight(.semibold)).tracking(-1)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier(identifier)
@@ -64,7 +64,7 @@ struct LanguagePickerScreen: View {
     private var p: Palette { Palette(scheme) }
     var body: some View {
         NavigationStack {
-            Page {
+            Page(scrollID: "language.scroll") {
                 HStack {
                     Text("FitΛ").font(.title2.weight(.semibold))
                     Spacer()

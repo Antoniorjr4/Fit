@@ -45,6 +45,7 @@ struct FitLambdaRoot: View {
 
 struct Page<Content: View>: View {
     @Environment(\.colorScheme) private var scheme
+    var scrollID = "page.scroll"
     @ViewBuilder var content: Content
     var body: some View {
         ScrollView {
@@ -53,6 +54,7 @@ struct Page<Content: View>: View {
                 .frame(maxWidth: 580)
                 .frame(maxWidth: .infinity)
         }.background(Palette(scheme).background.ignoresSafeArea())
+            .accessibilityIdentifier(scrollID)
     }
 }
 

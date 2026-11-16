@@ -10,7 +10,10 @@ final class InterfaceJourneyTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        if (testRun?.failureCount ?? 0) > 0 { capture("failure") }
+        if (testRun?.failureCount ?? 0) > 0 {
+            print("FIT_UI_FAILURE_HIERARCHY\n\(app.debugDescription)")
+            capture("failure")
+        }
         app.terminate()
     }
 
@@ -379,7 +382,12 @@ final class InterfaceJourneyTests: XCTestCase {
     }
 
     private func scrollTo(_ target: XCUIElement) {
-        let scroll = app.scrollViews.firstMatch
+        // The presented sheet and the retained tab can both expose a scroll view.
+        // Always drag the active page instead of relying on accessibility-tree order.
+        let languageScroll = app.scrollViews["language.scroll"]
+        let sheetScroll = app.scrollViews["sheet.scroll"]
+        let scroll = languageScroll.exists ? languageScroll
+            : sheetScroll.exists ? sheetScroll : app.scrollViews["page.scroll"]
         for _ in 0..<14 {
             let nav = app.navigationBars.firstMatch
             let tabs = app.tabBars.firstMatch
@@ -394,7 +402,7 @@ final class InterfaceJourneyTests: XCTestCase {
             }
             // SwiftUI may report a partly covered button as hittable. Move its
             // entire frame into the content area before tapping, above the tab bar.
-            let moveDown = target.exists && target.frame.minY < top
+            let moveDown = target.exists && !target.frame.isEmpty && target.frame.minY < top
             let start = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: moveDown ? 0.4 : 0.65))
             let end = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: moveDown ? 0.65 : 0.4))
             start.press(forDuration: 0.05, thenDragTo: end)
