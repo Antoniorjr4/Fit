@@ -42,6 +42,7 @@ struct FitDetailSheet: View {
                 }
             }
         }
+        .tint(p.accent)
         .onAppear { draftGoal = demo.goal; draftName = demo.name; draftFace = demo.face }
     }
 
