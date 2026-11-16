@@ -78,23 +78,28 @@ struct DemoNote: View {
 
 struct PrimaryAction: View {
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.isEnabled) private var isEnabled
     let title: String
     let symbol: String
     let action: () -> Void
     var body: some View {
         Button(action: action) {
             Label(title, systemImage: symbol).font(.subheadline.weight(.semibold))
-                .frame(maxWidth: .infinity).padding(.vertical, 17)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .padding(.horizontal, 16).padding(.vertical, 8)
         }
         .foregroundStyle(Palette(scheme).ink)
         .background(Palette(scheme).accent, in: RoundedRectangle(cornerRadius: 18))
         .buttonStyle(.plain)
+        .opacity(isEnabled ? 1 : 0.45)
     }
 }
 
 struct TodayScreen: View {
     @EnvironmentObject private var demo: DemoStore
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.dynamicTypeSize) private var textSize
     @Binding var tab: FitTab
     @Binding var sheet: FitSheet?
     private var p: Palette { Palette(scheme) }
@@ -104,6 +109,8 @@ struct TodayScreen: View {
             HStack {
                 Text("Boa noite,\n\(demo.name).")
                     .font(.largeTitle.weight(.semibold)).tracking(-1.2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("today.greeting")
                 Spacer()
                 Button { tab = .profile } label: {
                     Text(String(demo.name.prefix(1)).uppercased()).font(.subheadline)
@@ -111,7 +118,9 @@ struct TodayScreen: View {
                 }.accessibilityLabel("Abrir perfil")
             }
             HStack {
-                Button { tab = .band } label: { Label("Galaxy Fit3 · Demo", systemImage: "applewatch") }
+                Button { tab = .band } label: {
+                    Label("Galaxy Fit3 · Demo", systemImage: "applewatch").frame(minHeight: 44)
+                }
                 Spacer()
                 Label("78%", systemImage: "battery.75percent").foregroundStyle(p.accent)
             }.font(.caption).foregroundStyle(p.muted)
@@ -122,14 +131,15 @@ struct TodayScreen: View {
                     Button { sheet = .goal } label: {
                         Image(systemName: "target").frame(width: 44, height: 44)
                     }.accessibilityLabel("Editar meta de passos")
+                        .accessibilityIdentifier("goal.open")
                 }
-                ActivityArc(steps: demo.steps, goal: demo.goal).frame(height: 245)
+                ActivityArc(steps: demo.steps, goal: demo.goal)
                 Text(demo.goal > Double(demo.steps)
                      ? "Faltam \(DemoStore.number(Int(demo.goal) - demo.steps)) passos. Você está perto."
                      : "Meta alcançada. Cada passo conta.")
                     .font(.caption).foregroundStyle(p.muted).frame(maxWidth: .infinity)
                 Divider()
-                HStack {
+                statsLayout {
                     Stat(value: "5,8", unit: "km", label: "Distância")
                     Divider()
                     Stat(value: "382", unit: "kcal", label: "Energia ativa")
@@ -138,9 +148,13 @@ struct TodayScreen: View {
                 }.fixedSize(horizontal: false, vertical: true)
             }
             Text("Seu corpo, em foco.").font(.headline)
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { vitalCards }
+            if textSize.isAccessibilitySize {
                 VStack(spacing: 12) { vitalCards }
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { vitalCards }
+                    VStack(spacing: 12) { vitalCards }
+                }
             }
             Button { tab = .trends } label: {
                 Card {
@@ -152,18 +166,44 @@ struct TodayScreen: View {
             DemoNote()
         }
     }
+    private var statsLayout: AnyLayout {
+        textSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
+            : AnyLayout(HStackLayout(spacing: 8))
+    }
     @ViewBuilder private var vitalCards: some View {
         VitalTile(title: "Coração", value: "68", unit: "bpm", detail: "Última leitura · 20:12", symbol: "heart", color: p.pink) { sheet = .heart }
+            .accessibilityIdentifier("heart.open")
         VitalTile(title: "Sono", value: "7h32", unit: "min", detail: "Tempo total dormindo", symbol: "moon", color: p.purple) { sheet = .sleep }
+            .accessibilityIdentifier("sleep.open")
     }
 }
 
 struct ActivityArc: View {
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.dynamicTypeSize) private var textSize
     let steps: Int
     let goal: Double
     private var p: Palette { Palette(scheme) }
     var body: some View {
+        Group {
+            if textSize >= .xxxLarge {
+                VStack(spacing: 16) {
+                    Text(DemoStore.number(steps)).font(.largeTitle.weight(.semibold)).monospacedDigit()
+                    Text("de \(DemoStore.number(Int(goal))) passos").font(.body).foregroundStyle(p.muted)
+                    ProgressView(value: min(Double(steps) / goal, 1)).tint(p.accent)
+                    Text("\(Int(Double(steps) / goal * 100))% da meta")
+                        .font(.headline).foregroundStyle(p.accent)
+                }.frame(maxWidth: .infinity).padding(.vertical, 12)
+            } else {
+                arc.frame(height: 245)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(steps) passos de uma meta de \(Int(goal)) passos")
+        .accessibilityIdentifier("today.progress")
+    }
+    private var arc: some View {
         ZStack {
             Circle().trim(from: 0, to: 0.75).stroke(p.line, style: StrokeStyle(lineWidth: 11, lineCap: .round))
                 .rotationEffect(.degrees(135))
@@ -177,21 +217,20 @@ struct ActivityArc: View {
             }.padding(.bottom, 20)
             VStack { Spacer(); Text("\(Int(Double(steps) / goal * 100))% da meta").font(.caption.weight(.semibold)).foregroundStyle(p.accent).padding(.bottom, 8) }
         }.frame(maxWidth: 245).frame(maxWidth: .infinity)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(steps) passos de uma meta de \(Int(goal)) passos")
     }
 }
 
 struct Stat: View {
+    @Environment(\.dynamicTypeSize) private var textSize
     let value: String
     let unit: String
     let label: String
     var body: some View {
-        VStack(spacing: 7) {
+        VStack(alignment: textSize.isAccessibilitySize ? .leading : .center, spacing: 7) {
             (Text(value).font(.title3.weight(.semibold)) + Text(" \(unit)").font(.caption2))
-                .lineLimit(1).minimumScaleFactor(0.75)
             Text(label).font(.caption2).foregroundStyle(.secondary)
-        }.frame(maxWidth: .infinity)
+        }.frame(maxWidth: .infinity, alignment: textSize.isAccessibilitySize ? .leading : .center)
+            .accessibilityElement(children: .combine)
     }
 }
 
@@ -208,7 +247,7 @@ struct VitalTile: View {
             VStack(alignment: .leading, spacing: 13) {
                 Label(title, systemImage: symbol).font(.caption).foregroundStyle(color)
                 (Text(value).font(.title.weight(.medium)) + Text(" \(unit)").font(.caption))
-                    .lineLimit(1).minimumScaleFactor(0.7)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(detail).font(.caption2).foregroundStyle(.secondary)
                 HStack(alignment: .center, spacing: 4) {
                     ForEach(0..<15) { i in Capsule().fill(color.opacity(i % 3 == 0 ? 0.4 : 0.8)).frame(height: CGFloat(8 + (i * 7) % 21)) }
@@ -221,6 +260,7 @@ struct VitalTile: View {
 
 struct TrendsScreen: View {
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.dynamicTypeSize) private var textSize
     @State private var period = 0
     private var data: [StepDay] { period == 0 ? DemoStore.week : DemoStore.month }
     private var p: Palette { Palette(scheme) }
@@ -228,22 +268,35 @@ struct TrendsScreen: View {
         Page {
             Kicker(text: "CADA DIA CONTA")
             Text("Seu ritmo.").font(.largeTitle.weight(.semibold)).tracking(-1.2)
+                .accessibilityIdentifier("trends.title")
             Text("O progresso mora na constância.").font(.subheadline).foregroundStyle(p.muted)
             Picker("Período", selection: $period) {
                 Text("Semana").tag(0); Text("Mês").tag(1)
             }.pickerStyle(.segmented)
+                .accessibilityIdentifier("trends.period")
             Text(period == 0 ? "9 — 15 de novembro · exemplo" : "1 — 15 de novembro · exemplo")
                 .font(.caption).foregroundStyle(p.muted).frame(maxWidth: .infinity)
+                .accessibilityIdentifier("trends.range")
             Card {
                 Text(DemoStore.number(data.map(\.steps).reduce(0, +) / data.count))
-                    .font(.system(size: 43, weight: .semibold)).tracking(-1.5)
+                    .font(.largeTitle.weight(.semibold)).monospacedDigit()
                 Text("Média diária de passos").font(.caption).foregroundStyle(p.muted)
-                Chart(data) { day in
-                    BarMark(x: .value("Período", day.day), y: .value("Passos", day.steps))
-                        .foregroundStyle(p.accent.opacity(day.day == data.last?.day ? 1 : 0.4))
-                        .cornerRadius(5)
-                        .accessibilityLabel("\(day.day), \(day.steps) passos")
-                }.chartYScale(domain: 0...12000).frame(height: 210)
+                if textSize.isAccessibilitySize {
+                    ForEach(data) { day in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("\(day.day): \(DemoStore.number(day.steps)) passos").font(.body)
+                            ProgressView(value: Double(day.steps), total: 12000).tint(p.accent)
+                                .accessibilityHidden(true)
+                        }.padding(.vertical, 4)
+                    }
+                } else {
+                    Chart(data) { day in
+                        BarMark(x: .value("Período", day.day), y: .value("Passos", day.steps))
+                            .foregroundStyle(p.accent.opacity(day.day == data.last?.day ? 1 : 0.4))
+                            .cornerRadius(5)
+                            .accessibilityLabel("\(day.day), \(day.steps) passos")
+                    }.chartYScale(domain: 0...12000).frame(height: 210)
+                }
             }
             Text("Um olhar mais de perto.").font(.headline)
             Card {
@@ -273,7 +326,10 @@ struct BandIllustration: View {
             }.foregroundStyle(ink)
         }.frame(height: 280).rotationEffect(.degrees(-12))
             .shadow(color: .black.opacity(0.15), radius: 10, x: 12, y: 14)
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel("Ilustração conceitual da Galaxy Fit3")
+            .accessibilityValue(["Ritmo", "Essencial", "Noturno"][face])
+            .accessibilityIdentifier("band.illustration")
     }
 }
 
@@ -284,18 +340,23 @@ struct BandScreen: View {
         Page {
             Kicker(text: "SEMPRE COM VOCÊ")
             Text("Sua Fit.").font(.largeTitle.weight(.semibold)).tracking(-1.2)
+                .accessibilityIdentifier("band.title")
             Text("Pequena no pulso. Parte do seu dia.").font(.subheadline).foregroundStyle(.secondary)
             BandIllustration(face: demo.face).frame(maxWidth: .infinity)
             VStack(spacing: 8) {
                 Text("Galaxy Fit3").font(.title2.weight(.semibold))
                 Text(demo.connectionPreview ? "Conexão simulada · modo demonstração" : "Pronta para fazer parte do seu ritmo.").font(.caption).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("band.status")
                 Label("78% de bateria · exemplo", systemImage: "battery.75percent").font(.caption)
             }.frame(maxWidth: .infinity)
             PrimaryAction(title: "Simular conexão", symbol: "link") { sheet = .pairing }
+                .accessibilityIdentifier("pairing.open")
             Card {
                 Button { sheet = .faces } label: { RowLabel(title: "Seu estilo, no pulso", symbol: "paintpalette") }
+                    .accessibilityIdentifier("faces.open")
                 Divider()
                 Button { sheet = .sync } label: { RowLabel(title: "Sincronização planejada", symbol: "arrow.triangle.2.circlepath") }
+                    .accessibilityIdentifier("sync.open")
             }.buttonStyle(.plain)
             DemoNote()
         }
@@ -309,7 +370,7 @@ struct RowLabel: View {
         HStack(spacing: 12) {
             Label(title, systemImage: symbol); Spacer()
             Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
-        }.font(.subheadline).frame(minHeight: 38)
+        }.font(.subheadline).frame(minHeight: 44).contentShape(Rectangle())
     }
 }
 
@@ -320,6 +381,7 @@ struct ProfileScreen: View {
         Page {
             Kicker(text: "UM ESPAÇO SEU")
             Text("Do seu jeito.").font(.largeTitle.weight(.semibold)).tracking(-1.2)
+                .accessibilityIdentifier("profile.title")
             Button { sheet = .name } label: {
                 HStack(spacing: 15) {
                     Image(systemName: "person.crop.circle.fill").font(.system(size: 54))
@@ -329,25 +391,31 @@ struct ProfileScreen: View {
                     }
                     Spacer(); Image(systemName: "pencil")
                 }
-            }.buttonStyle(.plain)
+            }.buttonStyle(.plain).accessibilityIdentifier("name.open")
             Kicker(text: "SEU DIA A DIA")
             Card {
                 Button { sheet = .goal } label: { RowLabel(title: "Meta: \(DemoStore.number(Int(demo.goal))) passos", symbol: "target") }
+                    .accessibilityIdentifier("profile.goal")
                 Divider()
                 Toggle("Aparência escura", isOn: $demo.isDark)
+                    .accessibilityIdentifier("profile.dark-mode")
                 Divider()
                 Toggle("Prévia de lembretes", isOn: $demo.reminders)
+                    .accessibilityIdentifier("profile.reminders")
                 Text("Demonstração visual. Nenhum lembrete é enviado.").font(.caption).foregroundStyle(.secondary)
             }.buttonStyle(.plain).font(.subheadline)
             Kicker(text: "SEUS DADOS")
             Card {
                 Button { sheet = .health } label: { RowLabel(title: "Apple Saúde · planejado", symbol: "heart") }
+                    .accessibilityIdentifier("health.open")
                 Divider()
                 Button { sheet = .privacy } label: { RowLabel(title: "Privacidade", symbol: "hand.raised") }
+                    .accessibilityIdentifier("privacy.open")
                 Divider()
                 Button { sheet = .welcome } label: { RowLabel(title: "Rever boas-vindas", symbol: "sparkles") }
+                    .accessibilityIdentifier("welcome.open")
             }.buttonStyle(.plain)
-            Text("FitΛ\nDesign preview 0.2.0").font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: .infinity)
+            Text("FitΛ\nDesign preview 0.3.0").font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: .infinity)
             DemoNote()
         }
     }

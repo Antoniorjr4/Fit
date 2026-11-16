@@ -7,6 +7,8 @@ on:
     paths:
       - 'ios/**'
       - 'scripts/build-ui-macos.sh'
+      - 'scripts/test-ui-macos.sh'
+      - 'scripts/select-ui-simulators.py'
       - '.github/workflows/ios-ui.yml'
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
@@ -48,6 +50,8 @@ jobs:
           xcodegen --version
       - name: Build the native interface
         run: bash scripts/build-ui-macos.sh
+      - name: Exercise native UI journeys and capture both themes
+        run: bash scripts/test-ui-macos.sh
       - name: Save build evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -57,5 +61,5 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-# This produces a simulator .app, build logs and optionally a screenshot.
+# This produces a simulator .app, UI test results and native screenshots.
 # It does not sign an iPhone IPA, upload to TestFlight or contact a Fit3.

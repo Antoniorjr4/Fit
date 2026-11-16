@@ -21,6 +21,7 @@ mkdir -p "$fit_evidence"
 {
   xcodebuild -version
   xcodegen --version
+  xcrun --sdk iphonesimulator --show-sdk-version
   git -C "$fit_repo_root" rev-parse HEAD || true
 } > "$fit_evidence/environment.txt"
 
@@ -44,32 +45,17 @@ if [[ ! -d "$fit_app" ]]; then
 fi
 ditto -c -k --sequesterRsrc --keepParent "$fit_app" "$fit_evidence/FitLambda-simulator.zip"
 
+xcrun simctl list devices available --json > "$fit_evidence/available-simulators.json"
+python3 "$fit_repo_root/scripts/select-ui-simulators.py" \
+  "$fit_evidence/available-simulators.json" "$(xcrun --sdk iphonesimulator --show-sdk-version)" \
+  > "$fit_evidence/selected-simulators.json"
+cat "$fit_evidence/selected-simulators.json"
+
 if [[ "${CAPTURE_SCREENSHOT:-1}" != "1" ]]; then
-  echo "Native simulator build completed. Screenshot not requested."
+  echo "Native simulator build completed. Initial screenshot not requested."
   exit 0
 fi
-
-xcrun simctl list devices available --json > "$fit_evidence/available-simulators.json"
-fit_simulator_id="$(python3 - "$fit_evidence/available-simulators.json" <<'PY'
-import json, re, sys
-with open(sys.argv[1], encoding='utf-8') as handle:
-    devices = json.load(handle).get('devices', {})
-candidates = []
-for runtime, entries in devices.items():
-    match = re.search(r'iOS-(\d+)-(\d+)', runtime)
-    if not match:
-        continue
-    version = tuple(map(int, match.groups()))
-    if version < (17, 0):
-        continue
-    for device in entries:
-        if device.get('isAvailable') and device.get('name', '').startswith('iPhone'):
-            candidates.append((version, device.get('state') == 'Booted', device['udid']))
-if not candidates:
-    sys.exit('No available iPhone simulator with iOS 17 or newer. Build succeeded; capture requires an installed runtime.')
-print(max(candidates)[2])
-PY
-)"
+fit_simulator_id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["main"]["udid"])' "$fit_evidence/selected-simulators.json")"
 
 # boot returns an error for an already booted simulator; bootstatus below is
 # authoritative and fails the script if the device cannot become ready.
