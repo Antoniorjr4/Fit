@@ -9,6 +9,7 @@ on:
       - 'scripts/build-ui-macos.sh'
       - 'scripts/test-ui-macos.sh'
       - 'scripts/select-ui-simulators.py'
+      - 'scripts/verify-localizations.py'
       - '.github/workflows/ios-ui.yml'
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
@@ -29,7 +30,7 @@ concurrency:
 jobs:
   build-ui:
     runs-on: macos-15
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       HOMEBREW_NO_AUTO_UPDATE: "1"
       CAPTURE_SCREENSHOT: ${{ (github.event_name != 'workflow_dispatch' || inputs.capture_screenshot) && '1' || '0' }}
@@ -38,6 +39,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify localized resources
+        run: python3 scripts/verify-localizations.py
       - name: Record Xcode and simulator availability
         run: |
           xcodebuild -version

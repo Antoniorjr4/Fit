@@ -3,6 +3,77 @@ import Combine
 
 /// Visual-only state. No CoreBluetooth, HealthKit or real health data.
 final class DemoStore: ObservableObject {
+    private static let languageKey = "fitlambda.selected-language"
+    @Published private(set) var language: AppLanguage
+    @Published private(set) var languageChosen: Bool
+    @Published var scenario: PreviewScenario = .standard
+    @Published var recoveryNotice = false
+
+    init() {
+        let defaults = UserDefaults.standard
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("-fit-ui-reset-language") { defaults.removeObject(forKey: Self.languageKey) }
+        if let index = args.firstIndex(of: "-fit-ui-language"), args.indices.contains(index + 1),
+           let language = AppLanguage(rawValue: args[index + 1]) {
+            defaults.set(language.rawValue, forKey: Self.languageKey)
+        }
+        #endif
+        let saved = defaults.string(forKey: Self.languageKey).flatMap(AppLanguage.init(rawValue:))
+        language = saved ?? AppLanguage.recommended()
+        languageChosen = saved != nil
+    }
+    func selectLanguage(_ value: AppLanguage) {
+        language = value
+        UserDefaults.standard.set(value.rawValue, forKey: Self.languageKey)
+        languageChosen = true
+    }
+    func t(_ key: String, _ arguments: CVarArg...) -> String { language.format(key, arguments) }
+    func number(_ value: Int) -> String { value.formatted(.number.locale(language.locale)) }
+    func decimal(_ value: Double) -> String {
+        value.formatted(.number.precision(.fractionLength(0...1)).locale(language.locale))
+    }
+    func percent(_ value: Double) -> String {
+        value.formatted(.percent.precision(.fractionLength(0)).locale(language.locale))
+    }
+    // Fixed, reproducible demonstration dates; never presented as fresh device readings.
+    func date(_ template: String, day: Int = 15, hour: Int = 20, minute: Int = 12) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let value = calendar.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute))!
+        let formatter = DateFormatter()
+        formatter.locale = language.locale
+        formatter.timeZone = calendar.timeZone
+        formatter.setLocalizedDateFormatFromTemplate(template)
+        return formatter.string(from: value)
+    }
+    @Published private(set) var hasMetrics = true
+    @Published private(set) var hasSleep = true
+    func setScenario(_ value: PreviewScenario) {
+        scenario = value
+        hasMetrics = value != .firstUse
+        hasSleep = hasMetrics && value != .partial
+        recoveryNotice = false
+        connectionPreview = false
+    }
+    func setPermissionPreview(granted: Bool) {
+        // Authorization alone never creates metrics or fills a missing sleep record.
+        scenario = granted ? .notFound : .permissionDenied
+        recoveryNotice = false
+    }
+    func finishConnectionPreview() {
+        hasMetrics = true
+        hasSleep = true
+        scenario = .standard
+        connectionPreview = true
+        recoveryNotice = true
+    }
+    func retryPreview() {
+        hasMetrics = true
+        hasSleep = true
+        scenario = .standard
+        recoveryNotice = true
+    }
     @Published var name = "Antonio"
     @Published var goal = 10_000.0
     @Published var isDark = true
@@ -11,24 +82,23 @@ final class DemoStore: ObservableObject {
     @Published var connectionPreview = false
     let steps = 8_432
     static let week: [StepDay] = [
-        .init(day: "Seg", steps: 10_800), .init(day: "Ter", steps: 10_100),
-        .init(day: "Qua", steps: 10_400), .init(day: "Qui", steps: 11_500),
-        .init(day: "Sex", steps: 6_800), .init(day: "Sáb", steps: 8_487),
-        .init(day: "Dom", steps: 8_432)
+        .init(day: 9, steps: 10_800), .init(day: 10, steps: 10_100),
+        .init(day: 11, steps: 10_400), .init(day: 12, steps: 11_500),
+        .init(day: 13, steps: 6_800), .init(day: 14, steps: 8_487),
+        .init(day: 15, steps: 8_432)
     ]
     static let month: [StepDay] = [
-        .init(day: "1–4", steps: 7_350), .init(day: "5–8", steps: 8_020),
-        .init(day: "9–12", steps: 9_120), .init(day: "13–15", steps: 9_240)
+        .init(day: 1, range: "1–4", steps: 7_350), .init(day: 5, range: "5–8", steps: 8_020),
+        .init(day: 9, range: "9–12", steps: 9_120), .init(day: 13, range: "13–15", steps: 9_240)
     ]
-    static func number(_ value: Int) -> String {
-        value.formatted(.number.locale(Locale(identifier: "pt_BR")))
-    }
 }
 
 struct StepDay: Identifiable {
-    var id: String { day }
-    let day: String
+    var id: Int { day }
+    let day: Int
+    var range: String? = nil
     let steps: Int
+    func label(in demo: DemoStore) -> String { range ?? demo.date("EEE", day: day) }
 }
 
 struct Palette {

@@ -5,9 +5,15 @@ struct FitLambdaApp: App {
     @StateObject private var demo = DemoStore()
     var body: some Scene {
         WindowGroup {
-            FitLambdaRoot()
+            Group {
+                if demo.languageChosen {
+                    FitLambdaRoot()
+                } else {
+                    LanguagePickerScreen(isFirstLaunch: true)
+                }
+            }
                 .environmentObject(demo)
-                .environment(\.locale, Locale(identifier: "pt_BR"))
+                .environment(\.locale, demo.language.locale)
                 .preferredColorScheme(demo.isDark ? .dark : .light)
                 .modifier(PreviewTextSize())
         }

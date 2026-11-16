@@ -50,6 +50,8 @@ run_journeys() {
 run_journeys main
 run_journeys compact \
   -only-testing:FitLambdaUITests/InterfaceJourneyTests/testGoalSaveAndCancel \
-  -only-testing:FitLambdaUITests/InterfaceJourneyTests/testLargeTextNavigationAndEditing
+  -only-testing:FitLambdaUITests/InterfaceJourneyTests/testLargeTextNavigationAndEditing \
+  -only-testing:FitLambdaUITests/InterfaceJourneyTests/testFirstLaunchLanguagePersistsAndCancelKeepsChoice \
+  -only-testing:FitLambdaUITests/InterfaceJourneyTests/testGermanLargeTextAndLanguageSettings
 
 echo "Native UI journeys passed on both recorded simulators. No physical Fit3 was used."
