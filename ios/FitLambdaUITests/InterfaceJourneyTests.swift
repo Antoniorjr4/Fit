@@ -10,7 +10,7 @@ final class InterfaceJourneyTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        if testRun?.hasSucceeded == false { capture("failure") }
+        if (testRun?.failureCount ?? 0) > 0 { capture("failure") }
         app.terminate()
     }
 
@@ -204,13 +204,21 @@ final class InterfaceJourneyTests: XCTestCase {
     }
 
     private func scrollTo(_ target: XCUIElement) {
-        for _ in 0..<8 {
-            if target.exists && target.isHittable { return }
-            app.scrollViews.firstMatch.swipeUp()
-        }
-        for _ in 0..<8 {
-            if target.exists && target.isHittable { return }
-            app.scrollViews.firstMatch.swipeDown()
+        let scroll = app.scrollViews.firstMatch
+        for _ in 0..<14 {
+            let nav = app.navigationBars.firstMatch
+            let tabs = app.tabBars.firstMatch
+            let top = nav.exists && nav.isHittable ? nav.frame.maxY + 8 : app.frame.minY + 54
+            let bottom = tabs.exists && tabs.isHittable ? tabs.frame.minY - 8 : app.frame.maxY - 28
+            if target.exists && target.isHittable && target.frame.minY >= top && target.frame.maxY <= bottom {
+                return
+            }
+            // SwiftUI may report a partly covered button as hittable. Move its
+            // entire frame into the content area before tapping, above the tab bar.
+            let moveDown = target.exists && target.frame.minY < top
+            let start = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: moveDown ? 0.4 : 0.65))
+            let end = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: moveDown ? 0.65 : 0.4))
+            start.press(forDuration: 0.05, thenDragTo: end)
         }
         XCTFail("Control is unreachable: \(target)")
     }
