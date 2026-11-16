@@ -1,6 +1,6 @@
 # FitΛ — plano para chegar ao iPhone
 
-15/11/2026 · plano da frente de interface.
+Atualizado em 16/11/2026 · plano da frente de interface.
 
 ## Objetivo imediato
 
@@ -21,24 +21,26 @@ Transformar o conceito aprovado em um alpha nativo de interface, com navegação
 
 Não vincular o lançamento a um prazo até a primeira compilação e o caminho de comunicação com a Fit3 estarem comprovados.
 
-## O que já está preparado nesta revisão
+## Estado da frente visual
 
-- Workflow manual `.github/workflows/ios-ui.yml`.
-- Script `scripts/build-ui-macos.sh` para macOS.
+- Primeira compilação, abertura e captura confirmadas no [run inicial](https://github.com/Antoniorjr4/Fit/actions/runs/43778584651).
+- Workflow `.github/workflows/ios-ui.yml` para PRs, com execução manual disponível após integração à branch padrão.
+- Scripts de compilação e testes nativos para macOS.
+- [Jornadas de interface](UI_JOURNEYS.md) cobrindo as quatro abas, edição, temas e texto ampliado: nove execuções aprovadas em dois simuladores no [run 6](https://github.com/Antoniorjr4/Fit/actions/runs/43851101290). [Galeria e evidências da versão 0.3.0](validation/ui-0.3.0/README.md).
 - Documento `docs/FRONTEND_BACKEND_HANDOFF.md` para coordenar os dois chats.
 - Interface aprovada e arquivos BLE preservados.
 
-O workflow foi preparado, mas só a execução real no GitHub poderá confirmar se a fonte SwiftUI compila e abre corretamente. Uma captura do navegador não substitui essa confirmação.
+A versão 0.3.0 consolida os fluxos e a adaptação visual nos simuladores testados. Os cenários de falha, permissões e capacidades do contrato continuam previstos para a etapa seguinte.
 
 ## Como executar a validação no GitHub
 
-1. Usar o repositório do FitΛ na conta escolhida. Não copiar identificadores internos do Site para esse repositório; copiar a pasta `FitLambda` do pacote, incluindo a pasta `.github`.
-2. Abrir **Actions → FitLambda - native UI validation → Run workflow**.
-3. Manter `capture_screenshot` habilitado para abrir um simulador disponível.
+1. Usar o repositório [Antoniorjr4/Fit](https://github.com/Antoniorjr4/Fit).
+2. Atualizar um PR contra `main` com mudanças de interface nativa ou configuração dos testes. O workflow é disparado automaticamente.
+3. Abrir **Actions → FitLambda - native UI validation** e selecionar a execução correspondente ao commit.
 4. Após o job, baixar o artefato `FitLambda-native-ui-<número>`.
-5. Conferir `build.log`, `launch.log` e `FitLambda-native-dark.png`. Se falhar, usar o log para corrigir antes de ampliar a interface.
+5. Conferir os logs, resumos de testes e capturas descritos em [UI_JOURNEYS.md](UI_JOURNEYS.md). Se falhar, usar a evidência para corrigir antes de ampliar a interface.
 
-O disparo é manual; alterações e pushes não iniciam esse job. O job tem limite de 25 minutos e retenção de artefatos de 7 dias. Usa um runner padrão `macos-15`, com o Xcode disponível na imagem. As versões ficam registradas em `environment.txt`. Se não houver simulador compatível instalado, o script informa a limitação, preservando os logs e o app compilado quando disponível.
+O job tem limite de 25 minutos e retenção de artefatos de 7 dias. Usa um runner padrão `macos-15`, com o Xcode disponível na imagem. As versões ficam registradas em `environment.txt`. Se não houver simuladores compatíveis instalados, o script informa a limitação, preservando os logs e o app compilado quando disponível.
 
 ## Compilação e distribuição são etapas diferentes
 
