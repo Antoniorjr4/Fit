@@ -1,0 +1,5 @@
+Xcode 16.4
+Build version 16F6
+Version: 2.46.0
+18.5
+16ca247fa33e4600dd55be224dddc779df7ee7c3

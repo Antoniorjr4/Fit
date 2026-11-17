@@ -1,0 +1,61 @@
+name: FitLambda - iPhone device build
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-device.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  device-archive:
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Select Xcode 26
+        run: |
+          xcode_path="$(python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          candidates = []
+          for path in Path("/Applications").glob("Xcode_26*.app"):
+              match = re.fullmatch(r"Xcode_(26(?:\.\d+)*)\.app", path.name)
+              if match:
+                  version = tuple(map(int, match[1].split(".")))
+                  candidates.append((version, path))
+          if not candidates:
+              raise SystemExit("Xcode 26 is required on this runner.")
+          print(max(candidates)[1] / "Contents/Developer")
+          PY
+          )"
+          echo "DEVELOPER_DIR=$xcode_path" >> "$GITHUB_ENV"
+      - name: Build Release for iPhone
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          cd ios
+          xcodegen generate --spec project.yml
+          xcodebuild -project FitLambda.xcodeproj -scheme FitLambda \
+            -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/FitLambda.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO archive
+      - name: Check the device archive
+        run: |
+          app="$RUNNER_TEMP/FitLambda.xcarchive/Products/Applications/FitLambda.app"
+          test "$(lipo -archs "$app/FitLambda")" = arm64
+          test "$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$app/Info.plist")" = 17.0
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app/Info.plist")" = iPhoneOS
+          echo "Unsigned iPhone Release archive verified (arm64, iOS 17.0 minimum)."

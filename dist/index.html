@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101410"><meta name="description" content="FitΛ. Uma nova forma de viver seu movimento. Protótipo visual do app para iPhone.">
+  <title>FitΛ — Seu movimento, de um novo jeito.</title>
+  <link rel="icon" href="mark.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="studio">
+    <header class="studio-header"><a class="brand" href="./" aria-label="FitLambda, início"><span class="brand-mark">Λ</span><span>FitΛ</span></a><span class="edition">DESIGN STUDY <span>01 / 2026</span></span><button class="studio-theme" id="studio-theme" aria-label="Alternar aparência do aplicativo">Aparência <span id="theme-label">Escura</span><span data-icon="sun"></span></button></header>
+    <main class="stage">
+      <aside class="intro">
+        <p class="eyebrow"><span class="live-dot"></span> CRIADO PARA O SEU RITMO</p>
+        <h1>O seu dia.<br>Em uma<br><em>nova luz.</em></h1>
+        <p class="intro-copy">A sua Galaxy Fit3.<br>Uma experiência pensada<br>para o seu iPhone.</p>
+        <div class="screen-menu" role="group" aria-label="Explorar as telas">
+          <button data-nav="today" class="active"><span>01</span> Hoje <span data-icon="arrow-right"></span></button>
+          <button data-nav="trends"><span>02</span> Evolução <span data-icon="arrow-right"></span></button>
+          <button data-nav="band"><span>03</span> Pulseira <span data-icon="arrow-right"></span></button>
+          <button data-nav="profile"><span>04</span> Seu espaço <span data-icon="arrow-right"></span></button>
+        </div>
+        <p class="prototype-note">Protótipo interativo · v0.2<br>Explore as telas e toque nos cartões.</p>
+      </aside>
+      <div class="device-column">
+        <div class="phone" id="phone" data-theme="dark">
+          <div class="status-bar" aria-hidden="true"><b>9:41</b><span class="dynamic-island"></span><div class="status-symbols"><span data-icon="signal"></span><span data-icon="wifi"></span><span class="battery-full"></span></div></div>
+          <div class="app-scroll" id="app-scroll"><div id="app-content"></div></div>
+          <nav class="tabbar" aria-label="Navegação principal">
+            <button data-nav="today" class="selected" aria-current="page"><span data-icon="home"></span><span>Hoje</span></button>
+            <button data-nav="trends"><span data-icon="chart"></span><span>Evolução</span></button>
+            <button data-nav="band"><span data-icon="watch"></span><span>Pulseira</span></button>
+            <button data-nav="profile"><span data-icon="user"></span><span>Perfil</span></button>
+          </nav>
+          <div class="home-indicator" aria-hidden="true"></div>
+          <div class="sheet-backdrop" id="sheet-backdrop" hidden><section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1"></section></div>
+          <div class="toast" id="toast" role="status" aria-live="polite"></div>
+        </div>
+        <div class="device-caption"><span class="live-dot"></span><span>PRÉVIA NAVEGÁVEL</span><span>iPhone</span></div>
+      </div>
+      <aside class="design-notes">
+        <div class="mini-mark">Λ<span class="orbit one"></span><span class="orbit two"></span></div>
+        <p class="eyebrow">ESSENCIAL, POR NATUREZA.</p>
+        <h2 id="context-title">Menos ruído.<br>Mais movimento.</h2>
+        <p id="context-copy">Um olhar é o suficiente para entender seu dia. O que importa vem primeiro.</p>
+        <div class="swatches" aria-label="Paleta: grafite, névoa e lima"><i></i><i></i><i></i></div>
+        <div class="note-rule"></div>
+        <span class="tiny-label">FEITO PARA SENTIR</span><p class="small-copy">Tipografia precisa.<br>Cor com intenção.<br>Espaço para respirar.</p>
+        <button class="text-button" id="welcome-button">Ver boas-vindas <span data-icon="arrow-up-right"></span></button>
+        <p class="demo-disclaimer">Conceito de interface.<br>Dados fictícios. Bluetooth e Saúde ainda não integrados.</p>
+      </aside>
+    </main>
+    <footer class="studio-footer"><span>FitΛ <span class="footer-divider">/</span> A SUA FIT. NO SEU IPHONE.</span><span>DESIGNED WITH INTENTION.</span></footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
