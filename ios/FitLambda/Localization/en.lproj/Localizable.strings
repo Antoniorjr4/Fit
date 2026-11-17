@@ -174,3 +174,11 @@
 "welcome.explore" = "Explore FitΛ";
 "welcome.simple" = "Simple from the first tap";
 "welcome.tagline" = "Your Fit.\nNew possibilities.";
+"band.connection.title" = "Connection and sync";
+"band.connection.none" = "No band connected";
+"band.sync.noDevice" = "Waiting for a connection to sync";
+"band.sync.current" = "Sample data up to date";
+"band.sync.running" = "Syncing · demo";
+"band.sync.now" = "Sync now · demo";
+"band.sync.finish" = "Finish sync · demo";
+"band.diagnostics" = "Diagnostics";

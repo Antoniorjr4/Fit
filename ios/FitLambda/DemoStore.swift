@@ -49,12 +49,20 @@ final class DemoStore: ObservableObject {
     }
     @Published private(set) var hasMetrics = true
     @Published private(set) var hasSleep = true
+    @Published private(set) var isSyncingPreview = false
+
+    func startSyncPreview() {
+        guard connectionPreview, !isSyncingPreview else { return }
+        isSyncingPreview = true
+    }
+
     func setScenario(_ value: PreviewScenario) {
+        isSyncingPreview = false
         scenario = value
         hasMetrics = value != .firstUse
         hasSleep = hasMetrics && value != .partial
         recoveryNotice = false
-        connectionPreview = false
+        connectionPreview = value == .syncFailed || value == .partial
     }
     func setPermissionPreview(granted: Bool) {
         // Authorization alone never creates metrics or fills a missing sleep record.
@@ -62,13 +70,11 @@ final class DemoStore: ObservableObject {
         recoveryNotice = false
     }
     func finishConnectionPreview() {
-        hasMetrics = true
-        hasSleep = true
-        scenario = .standard
         connectionPreview = true
-        recoveryNotice = true
+        retryPreview()
     }
     func retryPreview() {
+        isSyncingPreview = false
         hasMetrics = true
         hasSleep = true
         scenario = .standard

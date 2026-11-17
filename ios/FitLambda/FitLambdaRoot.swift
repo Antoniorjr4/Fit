@@ -3,7 +3,7 @@ import Charts
 
 enum FitTab: Hashable { case today, trends, band, profile }
 enum FitSheet: String, Identifiable {
-    case goal, heart, sleep, welcome, pairing, faces, health, privacy, sync, name, language, scenarios, permissions
+    case goal, heart, sleep, welcome, pairing, faces, health, privacy, sync, name, language, scenarios, permissions, diagnostics
     var id: String { rawValue }
 }
 
@@ -34,6 +34,7 @@ struct FitLambdaRoot: View {
                     ScenarioPickerScreen()
                         .interactiveDismissDisabled()
                 case .permissions: PermissionsScreen()
+                case .diagnostics: BandDiagnosticsScreen()
                 default: FitDetailSheet(kind: item)
                 }
             }
@@ -404,16 +405,12 @@ struct BandScreen: View {
             Text(demo.t("band.title")).font(.largeTitle.weight(.semibold)).tracking(-1.2)
                 .accessibilityIdentifier("band.title")
             Text(demo.t("band.subtitle")).font(.subheadline).foregroundStyle(Palette(scheme).muted)
-            if demo.scenario != .standard { ScenarioStatusCard(sheet: $sheet) }
+            BandConnectionPanel(sheet: $sheet)
             BandIllustration(face: demo.face).frame(maxWidth: .infinity)
             VStack(spacing: 8) {
                 Text("Galaxy Fit3").font(.title2.weight(.semibold))
-                Text(demo.scenario != .standard ? demo.t("state.\(demo.scenario.rawValue).title") : demo.connectionPreview ? demo.t("band.simulated") : demo.t("band.ready")).font(.caption).foregroundStyle(Palette(scheme).muted)
-                    .accessibilityIdentifier("band.status")
                 Label(demo.hasMetrics ? demo.t("band.battery", demo.percent(0.78)) : demo.t("band.noBattery"), systemImage: "battery.75percent").font(.caption)
             }.frame(maxWidth: .infinity)
-            PrimaryAction(title: demo.t("band.connect"), symbol: "link") { sheet = .pairing }
-                .accessibilityIdentifier("pairing.open")
             Card {
                 Button { sheet = .faces } label: { RowLabel(title: demo.t("band.style"), symbol: "paintpalette") }
                     .accessibilityIdentifier("faces.open")

@@ -285,6 +285,8 @@ final class InterfaceJourneyTests: XCTestCase {
 
     func testConnectionFailuresPreserveHistory() {
         launch()
+        selectTab("Pulseira", title: "band.title")
+        XCTAssertEqual(element("band.status").label, "Nenhuma pulseira conectada")
         for scenario in ["bluetoothOff", "disconnected", "syncFailed"] {
             chooseScenario(scenario)
             XCTAssertTrue(element("state.title").exists)
@@ -296,7 +298,19 @@ final class InterfaceJourneyTests: XCTestCase {
                 closeSheet()
             }
         }
-        tap("state.action")
+        selectTab("Pulseira", title: "band.title")
+        XCTAssertTrue(element("band.status").label.contains("Conexão simulada"))
+        XCTAssertEqual(element("band.sync.status").label, "Não foi possível atualizar agora.")
+        XCTAssertTrue(element("band.sync.history").exists)
+        tap("band.diagnostics.open")
+        expectSheet("diagnostics")
+        closeSheet()
+        tap("band.sync.now")
+        XCTAssertEqual(element("band.sync.status").label, "Sincronizando · demo")
+        XCTAssertTrue(element("band.sync.history").exists)
+        tap("band.sync.finish")
+        XCTAssertEqual(element("band.sync.status").label, "Dados de exemplo atualizados")
+        selectTab("Hoje", title: "today.greeting")
         XCTAssertTrue(element("state.recovered").exists)
         XCTAssertFalse(element("state.title").exists)
         XCTAssertTrue(element("today.progress").label.contains("8.432"))

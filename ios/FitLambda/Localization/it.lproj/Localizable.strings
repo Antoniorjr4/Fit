@@ -174,3 +174,11 @@
 "welcome.explore" = "Esplora FitΛ";
 "welcome.simple" = "Semplice, dal primo tocco";
 "welcome.tagline" = "La tua Fit.\nNuove possibilità.";
+"band.connection.title" = "Connessione e sincronizzazione";
+"band.connection.none" = "Nessun bracciale connesso";
+"band.sync.noDevice" = "In attesa di una connessione per sincronizzare";
+"band.sync.current" = "Dati di esempio aggiornati";
+"band.sync.running" = "Sincronizzazione in corso · demo";
+"band.sync.now" = "Sincronizza ora · demo";
+"band.sync.finish" = "Completa la sincronizzazione · demo";
+"band.diagnostics" = "Diagnostica";
