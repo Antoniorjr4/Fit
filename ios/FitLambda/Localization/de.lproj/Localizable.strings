@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Visuelle Demo. Es werden keine Erinnerungen gesendet.";
 "profile.subtitle" = "Dein Rhythmus. Deine Entscheidungen.";
 "profile.title" = "Auf deine Art.";
-"profile.version" = "FitΛ 0.6.0\nEchtes Bluetooth · übrige Daten sind Beispiele";
+"profile.version" = "FitΛ 0.7.0\nEchtes Bluetooth · übrige Daten sind Beispiele";
 "profile.welcome" = "Begrüßung erneut ansehen";
 "scenarios.subtitle" = "Sieh dir an, wie FitΛ mit Situationen umgeht. Die Beispiele ändern weder dein Armband noch die iPhone-Berechtigungen.";
 "scenarios.title" = "Szenarien erkunden";
@@ -244,3 +244,9 @@
 "live.listen.autoOff" = "Das Band hat die Verbindung zweimal direkt nach dem Mithören getrennt. Das Mithören wurde ausgeschaltet, damit die Herzfrequenz weiterläuft.";
 "live.battery.none" = "Akkustand wird vom Band nicht gemeldet";
 "live.sap.ready" = "Samsung-Sitzung aktiv";
+"today.greeting.morning" = "Guten Morgen,\n%@.";
+"today.greeting.afternoon" = "Guten Tag,\n%@.";
+"live.calls" = "Anrufe am Band melden";
+"live.calls.note" = "Funktioniert, solange FitΛ geöffnet ist oder im Hintergrund läuft und das Band verbunden ist. Das iPhone verrät Apps nicht, wer anruft.";
+"live.calls.test" = "Klingeln am Band testen";
+"live.calls.name" = "Eingehender Anruf";

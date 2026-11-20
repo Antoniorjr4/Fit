@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Visual demo. No reminders are sent.";
 "profile.subtitle" = "Your rhythm. Your choices.";
 "profile.title" = "Your way.";
-"profile.version" = "FitΛ 0.6.0\nReal Bluetooth · other data is sample";
+"profile.version" = "FitΛ 0.7.0\nReal Bluetooth · other data is sample";
 "profile.welcome" = "Revisit welcome";
 "scenarios.subtitle" = "See how FitΛ handles each situation. These are visual examples; your band and iPhone permissions stay unchanged.";
 "scenarios.title" = "Explore scenarios";
@@ -244,3 +244,9 @@
 "live.listen.autoOff" = "The band dropped the connection twice right after listening started. Listening was turned off to keep the heart rate flowing.";
 "live.battery.none" = "Battery level not reported by the band";
 "live.sap.ready" = "Samsung session active";
+"today.greeting.morning" = "Good morning,\n%@.";
+"today.greeting.afternoon" = "Good afternoon,\n%@.";
+"live.calls" = "Ring the band on calls";
+"live.calls.note" = "Works while FitΛ is open or in the background with the band connected. The iPhone does not tell apps who is calling.";
+"live.calls.test" = "Test ringing on the band";
+"live.calls.name" = "Incoming call";

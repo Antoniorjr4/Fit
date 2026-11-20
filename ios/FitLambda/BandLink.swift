@@ -69,6 +69,8 @@ final class BandLink: NSObject, ObservableObject {
     @Published private(set) var listenAutoDisabled = false
     /// The band accepted the session greeting; requests can be sent on the accessory channel.
     @Published private(set) var sapReady = false
+    /// Make the band ring while the phone is ringing (needs the accessory session).
+    @Published private(set) var callAlerts = false
     /// iOS holds a stale bond for this band; only the user can clear it in Settings.
     @Published private(set) var needsForgetInSettings = false
 
@@ -80,6 +82,7 @@ final class BandLink: NSObject, ObservableObject {
         static let listen = "fitlambda.band.listen-proprietary"
         static let listenSAP = "fitlambda.band.listen-sap"
         static let sapMTU = "fitlambda.band.sap-mtu"
+        static let callAlerts = "fitlambda.band.call-alerts"
     }
 
     private static let heartService = CBUUID(string: "180D")
@@ -124,11 +127,18 @@ final class BandLink: NSObject, ObservableObject {
     private var sapPendingService: UInt8?
     private var sapResumeTimer: Timer?
     private var sapBatteryTimer: Timer?
+    private var callMonitor: CallMonitor?
+    private var bandRinging = false
+    private var testRingTimer: Timer?
+    /// Text the band shows for a call; iOS does not reveal the caller.
+    var incomingCallTitle = "Incoming call"
 
     override init() {
         super.init()
         listenProprietary = defaults.bool(forKey: Keys.listen)
         listenSAP = defaults.bool(forKey: Keys.listenSAP)
+        callAlerts = defaults.bool(forKey: Keys.callAlerts)
+        if callAlerts { startCallMonitor() }
         let bpm = defaults.integer(forKey: Keys.heartBPM)
         let at = defaults.double(forKey: Keys.heartAt)
         if bpm > 0, at > 0 { heart = HeartReading(bpm: bpm, at: Date(timeIntervalSince1970: at)) }
@@ -378,8 +388,72 @@ final class BandLink: NSObject, ObservableObject {
 
     // MARK: Samsung accessory session (the only place this client writes to the band)
 
+    func setCallAlerts(_ enabled: Bool) {
+        callAlerts = enabled
+        defaults.set(enabled, forKey: Keys.callAlerts)
+        if enabled {
+            startCallMonitor()
+        } else {
+            callMonitor = nil
+            stopBandRinging()
+        }
+        note(enabled ? "Call alerts on the band enabled" : "Call alerts on the band disabled")
+    }
+
+    /// Rings the band for a few seconds so the feature can be checked without a real call.
+    func testRing() {
+        startBandRinging(title: "FitLambda")
+        testRingTimer?.invalidate()
+        testRingTimer = Timer.scheduledTimer(withTimeInterval: 6, repeats: false) { [weak self] _ in
+            self?.stopBandRinging()
+        }
+    }
+
+    private func startCallMonitor() {
+        guard callMonitor == nil else { return }
+        let monitor = CallMonitor()
+        monitor.onEvent = { [weak self] event in
+            guard let self, self.callAlerts else { return }
+            switch event {
+            case .ringing:
+                self.note("Phone is ringing")
+                self.startBandRinging(title: self.incomingCallTitle)
+            case .answered:
+                self.note("Call answered on the phone")
+                if self.bandRinging {
+                    self.sendSAP(service: SapTransport.callService, payload: SapTransport.callAnswered, label: "call answered")
+                }
+            case .ended:
+                self.note("Call ended")
+                self.stopBandRinging()
+            }
+        }
+        callMonitor = monitor
+    }
+
+    private func startBandRinging(title: String) {
+        guard sapReady else {
+            note("Cannot ring the band: the Samsung session is not active")
+            return
+        }
+        bandRinging = true
+        sendSAP(service: SapTransport.callService, payload: SapTransport.callEnable, label: "call enable")
+        sendSAP(service: SapTransport.callService,
+                payload: SapTransport.callContact(name: title, number: "", at: Date()), label: "call contact")
+        sendSAP(service: SapTransport.callService, payload: SapTransport.callRinging, label: "call ringing")
+    }
+
+    private func stopBandRinging() {
+        testRingTimer?.invalidate()
+        guard bandRinging else { return }
+        bandRinging = false
+        sendSAP(service: SapTransport.callService, payload: SapTransport.callIdle, label: "call idle")
+    }
+
     private func endSAPSession() {
         sapReady = false
+        bandRinging = false
+        testRingTimer?.invalidate()
         sapPending = []
         sapPendingService = nil
         sapResumeTimer?.invalidate()
@@ -460,6 +534,13 @@ final class BandLink: NSObject, ObservableObject {
            let level = SapTransport.batteryLevel(fromSettingsReply: payload) {
             if battery != level { note("Battery from the band: \(level)%") }
             battery = level
+        }
+        // The wearer pressed silence (1) or reject (5) on the band: stop its ringing.
+        // iOS does not let an app reject the call itself.
+        if service == SapTransport.callService, bandRinging, let header = payload.first,
+           header & 0x40 == 0, [1, 5].contains(Int(header & 0x3F)) {
+            note("Ringing dismissed on the band")
+            stopBandRinging()
         }
     }
 

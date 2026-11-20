@@ -217,6 +217,17 @@ struct LiveBandScreen: View {
                 Label(demo.t("live.sap.ready"), systemImage: "checkmark.seal")
                     .font(.caption).foregroundStyle(p.accent)
                     .accessibilityIdentifier("live.sap.ready")
+                Divider()
+                Toggle(demo.t("live.calls"), isOn: Binding(
+                    get: { link.callAlerts },
+                    set: {
+                        link.incomingCallTitle = demo.t("live.calls.name")
+                        link.setCallAlerts($0)
+                    }))
+                    .font(.subheadline)
+                Text(demo.t("live.calls.note")).font(.caption).foregroundStyle(p.muted)
+                secondary(demo.t("live.calls.test")) { link.testRing() }
+                    .accessibilityIdentifier("live.calls.test")
             }
             if link.listenAutoDisabled {
                 Text(demo.t("live.listen.autoOff")).font(.caption).foregroundStyle(p.pink)

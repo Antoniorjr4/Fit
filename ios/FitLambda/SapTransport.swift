@@ -15,6 +15,43 @@ enum SapTransport {
     static let settingsService: UInt8 = 11
     static let setupService: UInt8 = 1
     static let batteryRequest: [UInt8] = [0x02]
+    static let callService: UInt8 = 3
+    static let callEnable: [UInt8] = [0x08, 0x01]
+    static let callRinging: [UInt8] = [0x03, 0x01]
+    static let callAnswered: [UInt8] = [0x03, 0x02]
+    static let callIdle: [UInt8] = [0x03, 0x00]
+    private static let callAgent = "com.samsung.android.providers.sacall.SACallHandlerService"
+
+    /// Caller card shown by the band before it starts ringing (call message 2, seven parameters).
+    static func callContact(name: String, number: String, at date: Date) -> [UInt8] {
+        let agent = Array(callAgent.utf8)
+        let nameBytes = clipped(name, to: 127)
+        let numberBytes = clipped(number, to: 127)
+        var millis = UInt64(max(0, date.timeIntervalSince1970 * 1000))
+        var time: [UInt8] = []
+        for _ in 0..<8 {
+            time.append(UInt8(millis & 0xFF))
+            millis >>= 8
+        }
+        var out: [UInt8] = [0x82, 0x07, 0x00, 0x01, 0x07, 0x01, 0x00, 0x00, 0x00]
+        out += [0x05, UInt8(agent.count)] + agent
+        out += [0x06] + time
+        out += [0x04, UInt8(nameBytes.count)] + nameBytes
+        out += [0x03, UInt8(numberBytes.count)] + numberBytes
+        out += [0x09, 0x00]
+        return out
+    }
+
+    /// UTF-8 bytes of a text cut at a character boundary so they fit a one-byte length.
+    private static func clipped(_ text: String, to limit: Int) -> [UInt8] {
+        var result: [UInt8] = []
+        for character in text {
+            let bytes = Array(String(character).utf8)
+            if result.count + bytes.count > limit { break }
+            result += bytes
+        }
+        return result
+    }
     static let watchInfoRequest: [UInt8] = [0x01, 0x04, 0x02, 0x00, 0x00, 0x00, 0x05, 0x00, 0x0E]
 
     /// CRC-16/ARC: reflected polynomial 0xA001, initial value 0.

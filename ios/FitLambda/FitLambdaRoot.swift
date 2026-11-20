@@ -117,6 +117,20 @@ struct PrimaryAction: View {
 struct TodayScreen: View {
     @EnvironmentObject private var demo: DemoStore
     @EnvironmentObject private var link: BandLink
+
+    /// With a real band linked the header follows the clock; the demonstration keeps its fixed evening.
+    private var headerDate: String {
+        guard link.hasRememberedBand else { return demo.date("EEEE d MMM") }
+        return Date().formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(demo.language.locale))
+    }
+
+    private var greetingKey: String {
+        guard link.hasRememberedBand else { return "today.greeting" }
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour >= 5 && hour < 12 { return "today.greeting.morning" }
+        if hour >= 12 && hour < 18 { return "today.greeting.afternoon" }
+        return "today.greeting"
+    }
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var textSize
     @Binding var tab: FitTab
@@ -124,9 +138,9 @@ struct TodayScreen: View {
     private var p: Palette { Palette(scheme) }
     var body: some View {
         Page {
-            Kicker(text: demo.date("EEEE d MMM").uppercased(with: demo.language.locale))
+            Kicker(text: headerDate.uppercased(with: demo.language.locale))
             HStack {
-                Text(demo.t("today.greeting", demo.name))
+                Text(demo.t(greetingKey, demo.name))
                     .font(.largeTitle.weight(.semibold)).tracking(-1.2)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("today.greeting")
@@ -138,7 +152,8 @@ struct TodayScreen: View {
             }
             HStack {
                 Button { tab = .band } label: {
-                    Label(demo.t("today.device"), systemImage: "applewatch").frame(minHeight: 44)
+                    Label(link.hasRememberedBand ? (link.deviceName ?? demo.t("today.device")) : demo.t("today.device"),
+                          systemImage: "applewatch").frame(minHeight: 44)
                 }
                 Spacer()
                 if let battery = link.battery {

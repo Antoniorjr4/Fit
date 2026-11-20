@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Démo visuelle. Aucun rappel n’est envoyé.";
 "profile.subtitle" = "Votre rythme. Vos choix.";
 "profile.title" = "À votre façon.";
-"profile.version" = "FitΛ 0.6.0\nBluetooth réel · autres données d’exemple";
+"profile.version" = "FitΛ 0.7.0\nBluetooth réel · autres données d’exemple";
 "profile.welcome" = "Revoir l’accueil";
 "scenarios.subtitle" = "Découvrez chaque situation dans FitΛ. Ces exemples visuels ne modifient ni le bracelet ni les autorisations de l’iPhone.";
 "scenarios.title" = "Explorer les scénarios";
@@ -244,3 +244,9 @@
 "live.listen.autoOff" = "Le bracelet a coupé la connexion deux fois juste après l’écoute. L’écoute a été désactivée pour conserver la fréquence cardiaque.";
 "live.battery.none" = "Batterie non indiquée par le bracelet";
 "live.sap.ready" = "Session Samsung active";
+"today.greeting.morning" = "Bonjour,\n%@.";
+"today.greeting.afternoon" = "Bon après-midi,\n%@.";
+"live.calls" = "Signaler les appels sur le bracelet";
+"live.calls.note" = "Fonctionne tant que FitΛ est ouvert ou en arrière-plan avec le bracelet connecté. L’iPhone n’indique pas qui appelle.";
+"live.calls.test" = "Tester la sonnerie sur le bracelet";
+"live.calls.name" = "Appel entrant";

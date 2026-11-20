@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Demostración visual. No se envían recordatorios.";
 "profile.subtitle" = "Tu ritmo. Tus decisiones.";
 "profile.title" = "A tu manera.";
-"profile.version" = "FitΛ 0.6.0\nBluetooth real · demás datos de ejemplo";
+"profile.version" = "FitΛ 0.7.0\nBluetooth real · demás datos de ejemplo";
 "profile.welcome" = "Volver a la bienvenida";
 "scenarios.subtitle" = "Mira cómo FitΛ presenta cada situación. Son ejemplos visuales; no cambian tu pulsera ni los permisos del iPhone.";
 "scenarios.title" = "Explorar escenarios";
@@ -244,3 +244,9 @@
 "live.listen.autoOff" = "La pulsera cortó la conexión dos veces justo después de la escucha. La escucha se desactivó para mantener el pulso.";
 "live.battery.none" = "La pulsera no informa la batería";
 "live.sap.ready" = "Sesión Samsung activa";
+"today.greeting.morning" = "Buenos días,\n%@.";
+"today.greeting.afternoon" = "Buenas tardes,\n%@.";
+"live.calls" = "Avisar llamadas en la pulsera";
+"live.calls.note" = "Funciona mientras FitΛ esté abierto o en segundo plano con la pulsera conectada. El iPhone no informa quién llama.";
+"live.calls.test" = "Probar timbre en la pulsera";
+"live.calls.name" = "Llamada entrante";

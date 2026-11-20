@@ -15,6 +15,7 @@ struct FitLambdaApp: App {
             }
                 .environmentObject(demo)
                 .environmentObject(link)
+                .onAppear { link.incomingCallTitle = demo.t("live.calls.name") }
                 .environment(\.locale, demo.language.locale)
                 .preferredColorScheme(demo.isDark ? .dark : .light)
                 .modifier(PreviewTextSize())
