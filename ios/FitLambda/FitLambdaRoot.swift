@@ -141,7 +141,14 @@ struct TodayScreen: View {
                     Label(demo.t("today.device"), systemImage: "applewatch").frame(minHeight: 44)
                 }
                 Spacer()
-                Label(demo.hasMetrics ? demo.percent(0.78) : "—", systemImage: "battery.75percent").foregroundStyle(p.accent)
+                if let battery = link.battery {
+                    Label(demo.percent(Double(battery) / 100), systemImage: "battery.75percent").foregroundStyle(p.accent)
+                } else if link.hasRememberedBand {
+                    // A real band is linked and exposes no standard battery service.
+                    Label(demo.t("live.battery.none"), systemImage: "battery.0percent").foregroundStyle(p.muted)
+                } else {
+                    Label(demo.hasMetrics ? demo.percent(0.78) : "—", systemImage: "battery.75percent").foregroundStyle(p.accent)
+                }
             }.font(.caption).foregroundStyle(p.muted)
             if demo.scenario != .standard && demo.scenario != .firstUse {
                 ScenarioStatusCard(sheet: $sheet)
