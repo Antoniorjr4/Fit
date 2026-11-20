@@ -71,6 +71,11 @@ final class BandLink: NSObject, ObservableObject {
     @Published private(set) var sapReady = false
     /// Make the band ring while the phone is ringing (needs the accessory session).
     @Published private(set) var callAlerts = false
+    /// Answer the band's health capability questions (experimental, opt-in).
+    @Published private(set) var healthEnabled = false
+    @Published private(set) var healthBatches = 0
+    /// Whether the band reports having been through first-run setup; nil until it answers.
+    @Published private(set) var bandInitialized: Bool?
     /// iOS holds a stale bond for this band; only the user can clear it in Settings.
     @Published private(set) var needsForgetInSettings = false
 
@@ -83,6 +88,7 @@ final class BandLink: NSObject, ObservableObject {
         static let listenSAP = "fitlambda.band.listen-sap"
         static let sapMTU = "fitlambda.band.sap-mtu"
         static let callAlerts = "fitlambda.band.call-alerts"
+        static let health = "fitlambda.band.health"
     }
 
     private static let heartService = CBUUID(string: "180D")
@@ -138,6 +144,7 @@ final class BandLink: NSObject, ObservableObject {
         listenProprietary = defaults.bool(forKey: Keys.listen)
         listenSAP = defaults.bool(forKey: Keys.listenSAP)
         callAlerts = defaults.bool(forKey: Keys.callAlerts)
+        healthEnabled = defaults.bool(forKey: Keys.health)
         if callAlerts { startCallMonitor() }
         let bpm = defaults.integer(forKey: Keys.heartBPM)
         let at = defaults.double(forKey: Keys.heartAt)
@@ -388,6 +395,34 @@ final class BandLink: NSObject, ObservableObject {
 
     // MARK: Samsung accessory session (the only place this client writes to the band)
 
+    func setHealthEnabled(_ enabled: Bool) {
+        healthEnabled = enabled
+        defaults.set(enabled, forKey: Keys.health)
+        note(enabled ? "Health capability answers enabled" : "Health capability answers disabled")
+    }
+
+    /// First-run setup of a new band and, on a configured one, a clock and language update.
+    func configureBand(languageCode: String) {
+        guard sapReady else {
+            note("Cannot configure the band: the Samsung session is not active")
+            return
+        }
+        guard let localeID = SapTransport.localeIDs[languageCode] else {
+            note("No band language id for \(languageCode); nothing was sent")
+            return
+        }
+        let now = Date()
+        let offset = TimeZone.current.secondsFromGMT(for: now)
+        let pattern = DateFormatter.dateFormat(fromTemplate: "j", options: 0, locale: Locale.current) ?? "H"
+        let hour24 = !pattern.contains("a")
+        sendSAP(service: SapTransport.setupService, payload: SapTransport.deviceStatusRequest, label: "device status")
+        sendSAP(service: SapTransport.setupService,
+                payload: SapTransport.initSettings(localeID: localeID, at: now, offsetSeconds: offset, hour24: hour24),
+                label: "time and language")
+        sendSAP(service: SapTransport.setupService, payload: SapTransport.userAgreementRequest, label: "setup complete")
+        sendSAP(service: SapTransport.setupService, payload: SapTransport.watchInfoRequest, label: "watch info")
+    }
+
     func setCallAlerts(_ enabled: Bool) {
         callAlerts = enabled
         defaults.set(enabled, forKey: Keys.callAlerts)
@@ -452,6 +487,7 @@ final class BandLink: NSObject, ObservableObject {
 
     private func endSAPSession() {
         sapReady = false
+        bandInitialized = nil
         bandRinging = false
         testRingTimer?.invalidate()
         sapPending = []
@@ -527,10 +563,14 @@ final class BandLink: NSObject, ObservableObject {
         guard sapReady, SapTransport.selfCheckPasses, let mtu = sapMTU,
               let target = sapWriteCharacteristic,
               let peripheral, peripheral.state == .connected else { return }
-        let frame = SapTransport.frame(service: service, payload: payload, mtu: mtu)
+        let frames = SapTransport.frames(service: service, payload: payload, mtu: mtu)
+        guard !frames.isEmpty else {
+            note("SAP TX \(label) dropped: message too long")
+            return
+        }
         let kind: CBCharacteristicWriteType = target.properties.contains(.write) ? .withResponse : .withoutResponse
-        peripheral.writeValue(Data(frame), for: target, type: kind)
-        note("SAP TX \(label) (service \(service)) \(Self.hex(Data(frame)))")
+        for frame in frames { peripheral.writeValue(Data(frame), for: target, type: kind) }
+        note("SAP TX \(label) (service \(service), \(frames.count) frame(s)) \(Self.hex(Data(payload), limit: 160))")
     }
 
     private func deliverSAP(service: UInt8, payload: [UInt8]) {
@@ -539,6 +579,18 @@ final class BandLink: NSObject, ObservableObject {
            let level = SapTransport.batteryLevel(fromSettingsReply: payload) {
             if battery != level { note("Battery from the band: \(level)%") }
             battery = level
+        }
+        if service == SapTransport.setupService, let initialized = SapTransport.isInitialized(watchInfo: payload) {
+            if bandInitialized != initialized { note(initialized ? "Band reports it is set up" : "Band reports it is NOT set up yet") }
+            bandInitialized = initialized
+        }
+        if service == SapHealth.service, healthEnabled {
+            if SapHealth.isDataBatch(payload) {
+                healthBatches += 1
+                note("Health data batch \(healthBatches) received and kept on the band (not acknowledged)")
+            } else if SapHealth.selfCheckPasses, let answer = SapHealth.reply(to: payload) {
+                sendSAP(service: SapHealth.service, payload: answer, label: "health answer")
+            }
         }
         // The wearer pressed silence (1) or reject (5) on the band: stop its ringing.
         // iOS does not let an app reject the call itself.

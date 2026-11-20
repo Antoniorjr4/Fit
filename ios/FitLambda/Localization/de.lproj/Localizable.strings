@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Visuelle Demo. Es werden keine Erinnerungen gesendet.";
 "profile.subtitle" = "Dein Rhythmus. Deine Entscheidungen.";
 "profile.title" = "Auf deine Art.";
-"profile.version" = "FitΛ 0.7.1\nEchtes Bluetooth · übrige Daten sind Beispiele";
+"profile.version" = "FitΛ 0.8.0\nEchtes Bluetooth · übrige Daten sind Beispiele";
 "profile.welcome" = "Begrüßung erneut ansehen";
 "scenarios.subtitle" = "Sieh dir an, wie FitΛ mit Situationen umgeht. Die Beispiele ändern weder dein Armband noch die iPhone-Berechtigungen.";
 "scenarios.title" = "Szenarien erkunden";
@@ -250,3 +250,9 @@
 "live.calls.note" = "Funktioniert, solange FitΛ geöffnet ist oder im Hintergrund läuft und das Band verbunden ist. Das iPhone verrät Apps nicht, wer anruft.";
 "live.calls.test" = "Klingeln am Band testen";
 "live.calls.name" = "Eingehender Anruf";
+"live.setup" = "Uhrzeit und Sprache des Bands einstellen";
+"live.setup.note" = "Verwendet die Sprache von FitΛ und die Uhr des iPhone. Schließt auch die Ersteinrichtung eines neuen oder zurückgesetzten Bands ab.";
+"live.setup.new" = "Dieses Band ist noch nicht eingerichtet";
+"live.health" = "Gesundheit (experimentell)";
+"live.health.note" = "Beantwortet die Gesundheitsanfragen des Bands, indem sich FitΛ als Gesundheits-App des Telefons ausgibt, und protokolliert die gesendeten Daten. Schritte und Schlaf werden noch nicht angezeigt, und die Daten bleiben auf dem Band.";
+"live.health.batches" = "%@ Gesundheitspakete empfangen";

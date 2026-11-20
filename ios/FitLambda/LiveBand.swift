@@ -228,6 +228,24 @@ struct LiveBandScreen: View {
                 Text(demo.t("live.calls.note")).font(.caption).foregroundStyle(p.muted)
                 secondary(demo.t("live.calls.test")) { link.testRing() }
                     .accessibilityIdentifier("live.calls.test")
+                Divider()
+                if link.bandInitialized == false {
+                    Label(demo.t("live.setup.new"), systemImage: "exclamationmark.circle")
+                        .font(.caption).foregroundStyle(p.pink)
+                }
+                secondary(demo.t("live.setup")) { link.configureBand(languageCode: demo.language.rawValue) }
+                    .accessibilityIdentifier("live.setup")
+                Text(demo.t("live.setup.note")).font(.caption).foregroundStyle(p.muted)
+                Divider()
+                Toggle(demo.t("live.health"), isOn: Binding(
+                    get: { link.healthEnabled },
+                    set: { link.setHealthEnabled($0) }))
+                    .font(.subheadline)
+                Text(demo.t("live.health.note")).font(.caption).foregroundStyle(p.muted)
+                if link.healthBatches > 0 {
+                    Text(demo.t("live.health.batches", demo.number(link.healthBatches)))
+                        .font(.caption).foregroundStyle(p.accent)
+                }
             }
             if link.listenAutoDisabled {
                 Text(demo.t("live.listen.autoOff")).font(.caption).foregroundStyle(p.pink)

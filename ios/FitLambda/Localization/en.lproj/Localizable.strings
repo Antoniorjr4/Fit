@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Visual demo. No reminders are sent.";
 "profile.subtitle" = "Your rhythm. Your choices.";
 "profile.title" = "Your way.";
-"profile.version" = "FitΛ 0.7.1\nReal Bluetooth · other data is sample";
+"profile.version" = "FitΛ 0.8.0\nReal Bluetooth · other data is sample";
 "profile.welcome" = "Revisit welcome";
 "scenarios.subtitle" = "See how FitΛ handles each situation. These are visual examples; your band and iPhone permissions stay unchanged.";
 "scenarios.title" = "Explore scenarios";
@@ -250,3 +250,9 @@
 "live.calls.note" = "Works while FitΛ is open or in the background with the band connected. The iPhone does not tell apps who is calling.";
 "live.calls.test" = "Test ringing on the band";
 "live.calls.name" = "Incoming call";
+"live.setup" = "Set the band's time and language";
+"live.setup.note" = "Uses FitΛ's language and the iPhone's clock. It also completes the first-run setup of a new or reset band.";
+"live.setup.new" = "This band has not been set up yet";
+"live.health" = "Health (experimental)";
+"live.health.note" = "Answers the band's health questions by presenting FitΛ as the phone's health app, and logs the data it sends. It does not show steps or sleep yet, and the data stays stored on the band.";
+"live.health.batches" = "%@ health batches received";

@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Demostración visual. No se envían recordatorios.";
 "profile.subtitle" = "Tu ritmo. Tus decisiones.";
 "profile.title" = "A tu manera.";
-"profile.version" = "FitΛ 0.7.1\nBluetooth real · demás datos de ejemplo";
+"profile.version" = "FitΛ 0.8.0\nBluetooth real · demás datos de ejemplo";
 "profile.welcome" = "Volver a la bienvenida";
 "scenarios.subtitle" = "Mira cómo FitΛ presenta cada situación. Son ejemplos visuales; no cambian tu pulsera ni los permisos del iPhone.";
 "scenarios.title" = "Explorar escenarios";
@@ -250,3 +250,9 @@
 "live.calls.note" = "Funciona mientras FitΛ esté abierto o en segundo plano con la pulsera conectada. El iPhone no informa quién llama.";
 "live.calls.test" = "Probar timbre en la pulsera";
 "live.calls.name" = "Llamada entrante";
+"live.setup" = "Configurar hora e idioma de la pulsera";
+"live.setup.note" = "Usa el idioma de FitΛ y el reloj del iPhone. También completa la configuración inicial de una pulsera nueva o restablecida.";
+"live.setup.new" = "Esta pulsera aún no está configurada";
+"live.health" = "Salud (experimental)";
+"live.health.note" = "Responde a las preguntas de salud de la pulsera presentando FitΛ como la app de salud del teléfono y registra los datos que envíe. Aún no muestra pasos ni sueño, y los datos siguen guardados en la pulsera.";
+"live.health.batches" = "%@ lotes de salud recibidos";
