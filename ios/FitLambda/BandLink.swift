@@ -48,6 +48,8 @@ enum BandInfoField: String, CaseIterable {
 }
 
 final class BandLink: NSObject, ObservableObject {
+    /// One instance for the whole app, so a Shortcuts action reaches the same band connection.
+    static let shared = BandLink()
     @Published private(set) var phase: BandPhase = .idle
     @Published private(set) var found: [FoundBand] = []
     @Published private(set) var scanEnded = false
@@ -76,6 +78,12 @@ final class BandLink: NSObject, ObservableObject {
     @Published private(set) var healthBatches = 0
     /// Step intervals received from the band, keyed by their start time (seconds since 1970).
     @Published private(set) var stepRecords: [Int: SapHealth.StepInterval] = [:]
+    @Published private(set) var heartHistory: [Int: SapHealth.HeartSample] = [:]
+    @Published private(set) var sleepEpisodes: [String: SapHealth.SleepEpisode] = [:]
+    @Published private(set) var sleepStages: Set<SapHealth.SleepStage> = []
+    /// Notifications waiting for the band to be reachable.
+    @Published private(set) var pendingNotifications = 0
+    private var notificationQueue: [(title: String, text: String, kind: SapNotify.Kind, at: Date)] = []
     /// Watch faces installed on the band, as it reports them, and the one in use.
     @Published private(set) var faces: [SapTransport.BandFace] = []
     @Published private(set) var currentFaceID: Int?
@@ -100,6 +108,10 @@ final class BandLink: NSObject, ObservableObject {
         static let steps = "fitlambda.band.steps"
         static let wrist = "fitlambda.band.right-wrist"
         static let language = "fitlambda.band.language"
+        static let heartHistory = "fitlambda.band.heart-history"
+        static let sleepEpisodes = "fitlambda.band.sleep-episodes"
+        static let sleepStages = "fitlambda.band.sleep-stages"
+        static let noticeSequence = "fitlambda.band.notice-sequence"
     }
 
     private static let heartService = CBUUID(string: "180D")
@@ -162,6 +174,18 @@ final class BandLink: NSObject, ObservableObject {
         if let stored = defaults.data(forKey: Keys.steps),
            let decoded = try? JSONDecoder().decode([Int: SapHealth.StepInterval].self, from: stored) {
             stepRecords = decoded
+        }
+        if let stored = defaults.data(forKey: Keys.heartHistory),
+           let decoded = try? JSONDecoder().decode([Int: SapHealth.HeartSample].self, from: stored) {
+            heartHistory = decoded
+        }
+        if let stored = defaults.data(forKey: Keys.sleepEpisodes),
+           let decoded = try? JSONDecoder().decode([String: SapHealth.SleepEpisode].self, from: stored) {
+            sleepEpisodes = decoded
+        }
+        if let stored = defaults.data(forKey: Keys.sleepStages),
+           let decoded = try? JSONDecoder().decode(Set<SapHealth.SleepStage>.self, from: stored) {
+            sleepStages = decoded
         }
         if callAlerts { startCallMonitor() }
         let bpm = defaults.integer(forKey: Keys.heartBPM)
@@ -253,6 +277,10 @@ final class BandLink: NSObject, ObservableObject {
         defaults.removeObject(forKey: Keys.sapMTU)
         defaults.removeObject(forKey: Keys.steps)
         stepRecords = [:]
+        for key in [Keys.heartHistory, Keys.sleepEpisodes, Keys.sleepStages] { defaults.removeObject(forKey: key) }
+        heartHistory = [:]
+        sleepEpisodes = [:]
+        sleepStages = []
         sapMTU = nil
         note("Band forgotten on this iPhone")
     }
@@ -435,6 +463,82 @@ final class BandLink: NSObject, ObservableObject {
                           activeMinutes: today.reduce(0) { $0 + $1.durationMillis } / 60_000)
     }
 
+    struct SleepSummary {
+        let start: Date
+        let end: Date
+        let asleepSeconds: Int
+        /// Seconds per stage kind; empty when the band sent only the sleep period.
+        let stageSeconds: [Int: Int]
+        let score: Int?
+    }
+
+    /// Sleep that ended on the given local day; nil when the band has not sent any.
+    func sleepSummary(on day: Date = Date()) -> SleepSummary? {
+        let calendar = Calendar.current
+        let begin = Int(calendar.startOfDay(for: day).timeIntervalSince1970)
+        let episodes = sleepEpisodes.values.filter { $0.end >= begin && $0.end < begin + 86_400 }
+        guard let first = episodes.map(\.start).min(), let last = episodes.map(\.end).max() else { return nil }
+        var perStage: [Int: Int] = [:]
+        for episode in episodes {
+            for stage in sleepStages where stage.sleepID == episode.id && stage.start < episode.end && stage.end > episode.start {
+                perStage[stage.kind, default: 0] += min(stage.end, episode.end) - max(stage.start, episode.start)
+            }
+        }
+        let period = episodes.reduce(0) { $0 + ($1.end - $1.start) }
+        let asleep = perStage.isEmpty ? period : perStage.filter { $0.key != SapHealth.stageAwake }.values.reduce(0, +)
+        return SleepSummary(start: Date(timeIntervalSince1970: TimeInterval(first)),
+                            end: Date(timeIntervalSince1970: TimeInterval(last)),
+                            asleepSeconds: asleep, stageSeconds: perStage,
+                            score: episodes.compactMap(\.score).max())
+    }
+
+    private func store(heart samples: [SapHealth.HeartSample]) {
+        var merged = heartHistory
+        for sample in samples { merged[sample.at] = sample }
+        let cutoff = Int(Date().timeIntervalSince1970) - 7 * 86_400
+        merged = merged.filter { $0.key >= cutoff }
+        heartHistory = merged
+        if let data = try? JSONEncoder().encode(merged) { defaults.set(data, forKey: Keys.heartHistory) }
+    }
+
+    private func store(sleep episodes: [SapHealth.SleepEpisode], stages: [SapHealth.SleepStage]) {
+        let cutoff = Int(Date().timeIntervalSince1970) - 14 * 86_400
+        var merged = sleepEpisodes
+        for episode in episodes { merged[episode.id] = episode }
+        merged = merged.filter { $0.value.end >= cutoff }
+        sleepEpisodes = merged
+        sleepStages = sleepStages.union(stages).filter { $0.end >= cutoff }
+        if let data = try? JSONEncoder().encode(merged) { defaults.set(data, forKey: Keys.sleepEpisodes) }
+        if let data = try? JSONEncoder().encode(sleepStages) { defaults.set(data, forKey: Keys.sleepStages) }
+    }
+
+    // MARK: Notifications on the band
+
+    /// Shows a notification on the band, now or as soon as the band is reachable (up to two minutes).
+    func sendNotification(title: String, text: String, kind: SapNotify.Kind) {
+        notificationQueue.append((title, text, kind, Date()))
+        pendingNotifications = notificationQueue.count
+        flushNotifications()
+    }
+
+    private func flushNotifications() {
+        notificationQueue.removeAll { Date().timeIntervalSince($0.at) > 120 }
+        guard sapReady, sapMTU != nil, peripheral?.state == .connected else {
+            pendingNotifications = notificationQueue.count
+            return
+        }
+        for item in notificationQueue {
+            var sequence = Int32(truncatingIfNeeded: defaults.integer(forKey: Keys.noticeSequence))
+            sequence = (sequence <= 0 || sequence >= Int32.max - 1) ? 1 : sequence + 1
+            defaults.set(Int(sequence), forKey: Keys.noticeSequence)
+            sendSAP(service: SapNotify.service,
+                    payload: SapNotify.notification(sequence: sequence, title: item.title, text: item.text, kind: item.kind, at: item.at),
+                    label: "notification \(sequence)")
+        }
+        notificationQueue = []
+        pendingNotifications = 0
+    }
+
     private func store(_ intervals: [SapHealth.StepInterval]) {
         var merged = stepRecords
         for interval in intervals { merged[interval.start] = interval }
@@ -488,6 +592,15 @@ final class BandLink: NSObject, ObservableObject {
             if let intervals = SapHealth.stepIntervals(from: message) {
                 store(intervals)
                 note("Health batch \(healthBatches): \(intervals.count) step interval(s), \(intervals.reduce(0) { $0 + $1.steps }) steps")
+            } else if let samples = SapHealth.heartSamples(from: message) {
+                store(heart: samples)
+                note("Health batch \(healthBatches): \(samples.count) heart-rate sample(s)")
+            } else if let episodes = SapHealth.sleepEpisodes(from: message) {
+                store(sleep: episodes, stages: [])
+                note("Health batch \(healthBatches): \(episodes.count) sleep period(s)")
+            } else if let stages = SapHealth.sleepStages(from: message) {
+                store(sleep: [], stages: stages)
+                note("Health batch \(healthBatches): \(stages.count) sleep stage(s)")
             } else {
                 note("Health batch \(healthBatches) saved (type \(message.count > 5 ? Int(message[5]) : -1), not shown yet)")
             }
@@ -679,6 +792,8 @@ final class BandLink: NSObject, ObservableObject {
         sendSAP(service: SapTransport.faceService, payload: SapTransport.faceCurrentRequest, label: "current face")
         sendSAP(service: SapTransport.faceService, payload: SapTransport.faceInstalledRequest, label: "installed faces")
         sendSAP(service: SapTransport.faceService, payload: SapTransport.faceAllInfoRequest, label: "face summary")
+        sendSAP(service: SapNotify.service, payload: SapNotify.capabilityRequest, label: "notification capability")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.flushNotifications() }
         sapBatteryTimer?.invalidate()
         sapBatteryTimer = Timer.scheduledTimer(withTimeInterval: 180, repeats: true) { [weak self] _ in
             self?.requestBattery()
@@ -716,6 +831,9 @@ final class BandLink: NSObject, ObservableObject {
             bandInitialized = initialized
         }
         if service == SapHealth.service, healthEnabled { handleHealth(payload) }
+        if service == SapNotify.service, let answer = SapNotify.acknowledgement(payload) {
+            note(answer.accepted ? "Notification \(answer.sequence) shown on the band" : "Notification \(answer.sequence) refused by the band")
+        }
         if service == SapTransport.faceService {
             if let list = SapTransport.faces(from: payload) {
                 faces = list

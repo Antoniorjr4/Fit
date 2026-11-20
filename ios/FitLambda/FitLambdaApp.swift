@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct FitLambdaApp: App {
     @StateObject private var demo = DemoStore()
-    @StateObject private var link = BandLink()
+    @StateObject private var link = BandLink.shared
     var body: some Scene {
         WindowGroup {
             Group {

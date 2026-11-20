@@ -52,44 +52,228 @@ struct LiveBandCard: View {
     }
 }
 
+/// What is known about a face the band reports: its name in the band maker's catalogue and
+/// which generic layout the tile should sketch. The tiles are FitΛ's own drawings, not the original artwork.
+struct BandFaceInfo {
+    enum Sketch { case analog, stacked, bars, ring, stats, photo, trail }
+    let name: String
+    let sketch: Sketch
+
+    static let known: [Int: BandFaceInfo] = [
+        22: BandFaceInfo(name: "Dynamic digital", sketch: .stacked),
+        28: BandFaceInfo(name: "Info brick", sketch: .bars),
+        46: BandFaceInfo(name: "Minimalist", sketch: .analog),
+        79: BandFaceInfo(name: "Step streak", sketch: .trail),
+        106: BandFaceInfo(name: "Fitness pro 3", sketch: .stats),
+        108: BandFaceInfo(name: "Step count", sketch: .ring),
+        254: BandFaceInfo(name: "Photo", sketch: .photo),
+    ]
+}
+
+/// A small generic sketch of a face layout showing the current time.
+struct BandFaceSketch: View {
+    let sketch: BandFaceInfo.Sketch
+    let tint: Color
+    let now: Date
+
+    private var hour: Int { Calendar.current.component(.hour, from: now) }
+    private var minute: Int { Calendar.current.component(.minute, from: now) }
+    private func two(_ value: Int) -> String { String(format: "%02d", value) }
+    private var clock: String { two(hour) + ":" + two(minute) }
+
+    var body: some View {
+        switch sketch {
+        case .analog:
+            ZStack {
+                ForEach(0..<12, id: \.self) { tick in
+                    Capsule().fill(Color.white.opacity(0.5)).frame(width: 1.5, height: 5)
+                        .offset(y: -30).rotationEffect(.degrees(Double(tick) * 30))
+                }
+                Capsule().fill(Color.white).frame(width: 3, height: 16).offset(y: -8)
+                    .rotationEffect(.degrees(Double(hour % 12) * 30 + Double(minute) / 2))
+                Capsule().fill(tint).frame(width: 2, height: 24).offset(y: -12)
+                    .rotationEffect(.degrees(Double(minute) * 6))
+            }
+        case .stacked:
+            VStack(spacing: -4) {
+                Text(two(hour)).foregroundStyle(tint)
+                Text(two(minute)).foregroundStyle(Color.white)
+            }.font(.system(size: 26, weight: .heavy, design: .rounded).italic())
+        case .bars:
+            VStack(alignment: .leading, spacing: 4) {
+                Text(two(hour)).foregroundStyle(tint)
+                Text(two(minute)).foregroundStyle(Color.white)
+                ForEach(0..<3, id: \.self) { row in
+                    Capsule().fill(tint.opacity(0.7)).frame(width: CGFloat(40 - row * 8), height: 3)
+                }
+            }.font(.system(size: 18, weight: .semibold, design: .rounded))
+        case .ring:
+            VStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 10).trim(from: 0, to: 0.6)
+                    .stroke(tint, style: StrokeStyle(lineWidth: 5, lineCap: .round)).frame(width: 34, height: 34)
+                Text(clock).font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(Color.white)
+            }
+        case .stats:
+            VStack(spacing: 8) {
+                HStack { Capsule().frame(width: 12, height: 3); Spacer(); Capsule().frame(width: 12, height: 3) }
+                Text(clock).font(.system(size: 15, weight: .bold, design: .rounded)).foregroundStyle(tint)
+                HStack { Capsule().frame(width: 12, height: 3); Spacer(); Capsule().frame(width: 12, height: 3) }
+            }.foregroundStyle(Color.white.opacity(0.7)).padding(.horizontal, 9)
+        case .photo:
+            VStack(spacing: 6) {
+                Image(systemName: "photo").font(.system(size: 22)).foregroundStyle(tint)
+                Text(clock).font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(Color.white)
+            }
+        case .trail:
+            VStack(alignment: .leading, spacing: 2) {
+                Text(two(hour)).foregroundStyle(tint.opacity(0.7))
+                Text(two(minute)).foregroundStyle(Color.white)
+                Image(systemName: "figure.walk").font(.system(size: 18)).foregroundStyle(tint).padding(.top, 4)
+            }.font(.system(size: 18, weight: .bold, design: .rounded))
+        }
+    }
+}
+
 /// The faces the band itself reports, as tiles. Choosing one switches the band at once.
-/// Tiles carry the face number only: the artwork belongs to the band maker and is not bundled.
 struct BandFacesGrid: View {
     @EnvironmentObject private var demo: DemoStore
     @EnvironmentObject private var link: BandLink
     @Environment(\.colorScheme) private var scheme
-    private let columns = [GridItem(.adaptive(minimum: 84), spacing: 12)]
+    private let columns = [GridItem(.adaptive(minimum: 92), spacing: 12)]
 
     var body: some View {
         let p = Palette(scheme)
-        LazyVGrid(columns: columns, spacing: 14) {
-            ForEach(link.faces) { face in
-                let current = face.id == link.currentFaceID
-                Button { link.selectFace(face) } label: {
-                    VStack(spacing: 6) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 14).fill(Color.black)
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(current ? p.accent : p.muted.opacity(0.4), lineWidth: current ? 3 : 1)
-                            VStack(spacing: 2) {
-                                Text(demo.number(face.id))
-                                    .font(.system(size: 22, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(current ? p.accent : Color.white)
-                                if current {
-                                    Image(systemName: "checkmark.circle.fill").font(.caption).foregroundStyle(p.accent)
+        TimelineView(.everyMinute) { context in
+            LazyVGrid(columns: columns, spacing: 16) {
+                ForEach(link.faces) { face in
+                    let current = face.id == link.currentFaceID
+                    let info = BandFaceInfo.known[face.id]
+                    let title = info?.name ?? demo.t("band.faces.item", demo.number(face.id))
+                    Button { link.selectFace(face) } label: {
+                        VStack(spacing: 6) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 16).fill(Color.black)
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(current ? p.accent : p.muted.opacity(0.4), lineWidth: current ? 3 : 1)
+                                if let info {
+                                    BandFaceSketch(sketch: info.sketch, tint: Color(hex: 0xD4F68A), now: context.date)
+                                } else {
+                                    Text(demo.number(face.id))
+                                        .font(.system(size: 22, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(Color.white)
                                 }
+                            }.frame(width: 76, height: 110).clipShape(RoundedRectangle(cornerRadius: 16))
+                            Text(title).font(.caption2.weight(current ? .semibold : .regular))
+                                .foregroundStyle(current ? p.accent : p.muted)
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                            if current {
+                                Label(demo.t("band.faces.current"), systemImage: "checkmark.circle.fill")
+                                    .font(.caption2).foregroundStyle(p.accent)
                             }
-                        }.frame(width: 64, height: 92)
-                        Text(current ? demo.t("band.faces.current") : demo.t("band.faces.item", demo.number(face.id)))
-                            .font(.caption2).foregroundStyle(current ? p.accent : p.muted)
-                            .lineLimit(1).minimumScaleFactor(0.7)
-                    }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
-                }.buttonStyle(.plain)
-                    .accessibilityLabel(demo.t("band.faces.item", demo.number(face.id)))
-                    .accessibilityAddTraits(current ? .isSelected : [])
+                        }.frame(maxWidth: .infinity, minHeight: 44, alignment: .top).contentShape(Rectangle())
+                    }.buttonStyle(.plain)
+                        .accessibilityLabel(title)
+                        .accessibilityAddTraits(current ? .isSelected : [])
+                }
             }
         }
         Text(demo.t("band.faces.note")).font(.caption).foregroundStyle(p.muted)
+    }
+}
+
+/// Sleep the band sent for last night, on the Today screen.
+struct RealSleepCard: View {
+    @EnvironmentObject private var demo: DemoStore
+    @EnvironmentObject private var link: BandLink
+    @Environment(\.colorScheme) private var scheme
+
+    private func duration(_ seconds: Int) -> String {
+        demo.t("duration.hm", demo.number(seconds / 3600), demo.number(seconds % 3600 / 60))
+    }
+
+    var body: some View {
+        let p = Palette(scheme)
+        let stages = [
+            SleepStageRow(kind: SapHealth.stageAwake, key: "sleep.awake", color: p.pink),
+            SleepStageRow(kind: SapHealth.stageREM, key: "sleep.rem", color: p.accent),
+            SleepStageRow(kind: SapHealth.stageLight, key: "sleep.light", color: p.purple.opacity(0.55)),
+            SleepStageRow(kind: SapHealth.stageDeep, key: "sleep.deep", color: p.purple),
+        ]
+        Card {
+            Label(demo.t("vital.sleep"), systemImage: "moon.fill").font(.subheadline.weight(.medium)).foregroundStyle(p.purple)
+            if let sleep = link.sleepSummary() {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(duration(sleep.asleepSeconds)).font(.system(size: 34, weight: .semibold, design: .rounded))
+                    Spacer()
+                    if let score = sleep.score {
+                        Text(demo.t("sleep.real.score", demo.number(score))).font(.subheadline).foregroundStyle(p.muted)
+                    }
+                }
+                Text(demo.stamp(sleep.start) + " – " + demo.stamp(sleep.end)).font(.caption).foregroundStyle(p.muted)
+                let total = max(1, sleep.stageSeconds.values.reduce(0, +))
+                if !sleep.stageSeconds.isEmpty {
+                    GeometryReader { area in
+                        HStack(spacing: 2) {
+                            ForEach(stages) { stage in
+                                let share = CGFloat(sleep.stageSeconds[stage.kind] ?? 0) / CGFloat(total)
+                                if share > 0 {
+                                    RoundedRectangle(cornerRadius: 4).fill(stage.color)
+                                        .frame(width: max(2, (area.size.width - 6) * share))
+                                }
+                            }
+                        }
+                    }.frame(height: 14)
+                    ForEach(stages) { stage in
+                        HStack {
+                            Circle().fill(stage.color).frame(width: 8, height: 8)
+                            Text(demo.t(stage.key)).font(.caption)
+                            Spacer()
+                            Text(duration(sleep.stageSeconds[stage.kind] ?? 0)).font(.caption).foregroundStyle(p.muted)
+                        }
+                    }
+                } else {
+                    Text(demo.t("sleep.real.periodOnly")).font(.caption).foregroundStyle(p.muted)
+                }
+            } else {
+                Text(demo.t("sleep.real.empty")).font(.caption).foregroundStyle(p.muted)
+            }
+        }.accessibilityIdentifier("sleep.real")
+    }
+}
+
+/// Full-screen, searchable list of the languages the band firmware offers.
+struct BandLanguageList: View {
+    @EnvironmentObject private var demo: DemoStore
+    @EnvironmentObject private var link: BandLink
+    @Environment(\.dismiss) private var dismiss
+    let options: [BandLanguageOption]
+    let selected: String
+    @State private var query = ""
+
+    var body: some View {
+        NavigationStack {
+            List(options.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }) { item in
+                Button {
+                    link.setBandLanguage(item.code)
+                    dismiss()
+                } label: {
+                    HStack {
+                        Text(item.name).foregroundStyle(Color.primary)
+                        Spacer()
+                        if item.code == selected { Image(systemName: "checkmark") }
+                    }.frame(minHeight: 44).contentShape(Rectangle())
+                }
+            }
+            .searchable(text: $query)
+            .navigationTitle(demo.t("live.language"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { dismiss() } label: { Image(systemName: "xmark") }
+                        .accessibilityLabel(demo.t("common.close"))
+                }
+            }
+        }
     }
 }
 
@@ -98,6 +282,10 @@ struct LiveBandScreen: View {
     @EnvironmentObject private var link: BandLink
     @Environment(\.colorScheme) private var scheme
     private var p: Palette { Palette(scheme) }
+    @State private var showLanguages = false
+    private var chosenBandLanguage: String {
+        link.bandLanguage ?? SapTransport.bandLanguage(forAppLanguage: demo.language.rawValue)
+    }
 
     var body: some View {
         SheetFrame(title: demo.t("live.title"), identifier: "sheet.live.title") {
@@ -270,6 +458,12 @@ struct LiveBandScreen: View {
                 secondary(demo.t("live.calls.test")) { link.testRing() }
                     .accessibilityIdentifier("live.calls.test")
                 Divider()
+                Text(demo.t("live.notify.title")).font(.subheadline)
+                Text(demo.t("live.notify.note")).font(.caption).foregroundStyle(p.muted)
+                secondary(demo.t("live.notify.test")) {
+                    link.sendNotification(title: "FitLambda", text: demo.t("live.notify.sample"), kind: .other)
+                }.accessibilityIdentifier("live.notify.test")
+                Divider()
                 if link.bandInitialized == false {
                     Label(demo.t("live.setup.new"), systemImage: "exclamationmark.circle")
                         .font(.caption).foregroundStyle(p.pink)
@@ -287,14 +481,20 @@ struct LiveBandScreen: View {
                     }.pickerStyle(.segmented)
                 }
                 Text(demo.t("live.wrist")).font(.caption).foregroundStyle(p.muted)
-                Picker(demo.t("live.language"), selection: Binding(
-                    get: { link.bandLanguage ?? SapTransport.bandLanguage(forAppLanguage: demo.language.rawValue) },
-                    set: { link.setBandLanguage($0) })) {
-                    ForEach(bandLanguages) { item in
-                        Text(item.name).tag(item.code)
-                    }
-                }.pickerStyle(.menu).font(.subheadline).tint(p.accent)
+                Button { showLanguages = true } label: {
+                    HStack {
+                        Text(demo.t("live.language")).font(.subheadline)
+                        Spacer()
+                        Text(bandLanguages.first { $0.code == chosenBandLanguage }?.name ?? chosenBandLanguage)
+                            .font(.subheadline).foregroundStyle(p.accent)
+                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(p.muted)
+                    }.frame(minHeight: 44).contentShape(Rectangle())
+                }.buttonStyle(.plain)
                     .accessibilityIdentifier("live.language")
+                    .sheet(isPresented: $showLanguages) {
+                        BandLanguageList(options: bandLanguages, selected: chosenBandLanguage)
+                            .environmentObject(demo).environmentObject(link)
+                    }
                 secondary(demo.t("live.setup")) { link.configureBand(languageCode: demo.language.rawValue) }
                     .accessibilityIdentifier("live.setup")
                 Text(demo.t("live.setup.note")).font(.caption).foregroundStyle(p.muted)
@@ -371,4 +571,11 @@ struct BandLanguageOption: Identifiable {
     let code: String
     let name: String
     var id: String { code }
+}
+
+struct SleepStageRow: Identifiable {
+    let kind: Int
+    let key: String
+    let color: Color
+    var id: Int { kind }
 }

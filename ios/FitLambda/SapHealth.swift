@@ -159,6 +159,139 @@ enum SapHealth {
         }
     }
 
+    // MARK: Heart-rate history and sleep
+    // Record layouts from Fit3VitalCodec.kt and Fit3Sleep.kt in yuriyurin/Fit3-App (GPL-3.0).
+    // Anything that does not match the known layout is rejected, never guessed.
+
+    struct HeartSample: Codable, Equatable {
+        let at: Int
+        let bpm: Int
+        let min: Int?
+        let max: Int?
+    }
+    struct SleepEpisode: Codable, Equatable {
+        let id: String
+        let start: Int
+        let end: Int
+        let score: Int?
+    }
+    struct SleepStage: Codable, Hashable {
+        let sleepID: String
+        let start: Int
+        let end: Int
+        let kind: Int
+    }
+    static let stageAwake = 40001, stageLight = 40002, stageDeep = 40003, stageREM = 40004
+    static let typeHeart = 10, typeSleep = 16, typeSleepStage = 17
+
+    /// Field width for a record of the given type: 0 = unknown field, -1 = length-prefixed blob.
+    private static func vitalWidth(type: Int, id: Int) -> Int {
+        if [1, 2, 3, 5, 151, 153].contains(id) { return 4 }
+        switch type {
+        case typeHeart:
+            if (32...35).contains(id) { return 1 }
+            if id == 36 { return -1 }
+            return id == 37 ? 2 : 0
+        case typeSleep:
+            if (28...37).contains(id) { return 2 }
+            if id == 40 || id == 80 { return 4 }
+            if [81, 83, 86].contains(id) { return 1 }
+            return (id == 82 || id == 117) ? 16 : 0
+        default: return 0
+        }
+    }
+
+    private static func healthSeconds(_ bytes: [UInt8]) -> Int { Int(int32(bytes, at: 0)) + 631_152_000 }
+    private static func hexText(_ bytes: [UInt8]) -> String { bytes.map { String(format: "%02x", $0) }.joined() }
+
+    /// Length-prefixed records of one data batch, each as field id -> raw bytes.
+    private static func vitalRecords(from payload: [UInt8], type: Int) -> [[Int: [UInt8]]]? {
+        guard payload.count >= 12, payload[0] == 0x82, payload[2] == 0xE0, Int(payload[5]) == type else { return nil }
+        var offset = 6
+        var records: [[Int: [UInt8]]] = []
+        for _ in 0..<128 {
+            guard offset + 5 <= payload.count else { return nil }
+            let more = payload[offset]
+            guard more <= 1 else { return nil }
+            let length = Int(int32(payload, at: offset + 1))
+            offset += 5
+            guard length > 0, length <= 65_536, offset + length <= payload.count else { return nil }
+            let end = offset + length
+            var fields: [Int: [UInt8]] = [:]
+            while offset < end {
+                let id = Int(payload[offset])
+                offset += 1
+                let width = vitalWidth(type: type, id: id)
+                if width == 0 { return nil }
+                if width < 0 {
+                    guard offset + 4 <= end else { return nil }
+                    let blob = Int(int32(payload, at: offset))
+                    offset += 4
+                    guard blob >= 0, blob <= 65_536, offset + blob <= end else { return nil }
+                    offset += blob
+                } else {
+                    guard offset + width <= end else { return nil }
+                    fields[id] = Array(payload[offset..<(offset + width)])
+                    offset += width
+                }
+            }
+            records.append(fields)
+            if more == 0 { return records }
+        }
+        return nil
+    }
+
+    static func heartSamples(from payload: [UInt8]) -> [HeartSample]? {
+        guard let records = vitalRecords(from: payload, type: typeHeart) else { return nil }
+        return records.compactMap { fields in
+            guard let time = fields[2] ?? fields[1], let bpm = fields[32]?.first, bpm > 0 else { return nil }
+            return HeartSample(at: healthSeconds(time), bpm: Int(bpm),
+                               min: fields[33]?.first.map { Int($0) }, max: fields[34]?.first.map { Int($0) })
+        }
+    }
+
+    static func sleepEpisodes(from payload: [UInt8]) -> [SleepEpisode]? {
+        guard let records = vitalRecords(from: payload, type: typeSleep) else { return nil }
+        return records.compactMap { fields in
+            guard let first = fields[1], let last = fields[2] else { return nil }
+            let start = healthSeconds(first), end = healthSeconds(last)
+            guard end > start, end - start <= 36 * 3600 else { return nil }
+            let score = fields[83]?.first.map { Int($0) }.flatMap { $0 <= 100 ? $0 : nil }
+            return SleepEpisode(id: fields[117].map(hexText) ?? "\(start):\(end)", start: start, end: end, score: score)
+        }
+    }
+
+    /// Sleep stages arrive as rows of exactly eight fixed-width fields, without a length prefix.
+    static func sleepStages(from payload: [UInt8]) -> [SleepStage]? {
+        guard payload.count >= 6, payload[0] == 0x82, payload[2] == 0xE0, Int(payload[5]) == typeSleepStage else { return nil }
+        var offset = 6
+        var stages: [SleepStage] = []
+        for _ in 0..<10_000 {
+            guard offset < payload.count else { return nil }
+            let more = payload[offset]
+            offset += 1
+            guard more <= 1 else { return nil }
+            var fields: [Int: [UInt8]] = [:]
+            for _ in 0..<8 {
+                guard offset < payload.count else { return nil }
+                let id = Int(payload[offset])
+                offset += 1
+                let width: Int
+                if [1, 2, 3, 5, 82, 151, 153].contains(id) { width = 4 } else if id == 85 { width = 16 } else { return nil }
+                guard fields[id] == nil, offset + width <= payload.count else { return nil }
+                fields[id] = Array(payload[offset..<(offset + width)])
+                offset += width
+            }
+            guard let first = fields[1], let last = fields[2], let kind = fields[82], let owner = fields[85] else { return nil }
+            let start = healthSeconds(first), end = healthSeconds(last)
+            if end > start, end - start <= 36 * 3600 {
+                stages.append(SleepStage(sleepID: hexText(owner), start: start, end: end, kind: Int(int32(kind, at: 0))))
+            }
+            if more == 0 { return stages }
+        }
+        return nil
+    }
+
     static func isDataBatch(_ payload: [UInt8]) -> Bool {
         guard let head = header(payload) else { return false }
         return head.isRequest && head.id == Command.syncData.rawValue

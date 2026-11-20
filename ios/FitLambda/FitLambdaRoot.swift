@@ -215,6 +215,7 @@ struct TodayScreen: View {
                         VStack(spacing: 12) { vitalCards }
                     }
                 }
+                if realDay { RealSleepCard() }
                 Button { tab = .trends } label: {
                     Card {
                         Label(demo.t("today.insightTitle"), systemImage: "sparkles").font(.subheadline.weight(.medium))
@@ -242,7 +243,10 @@ struct TodayScreen: View {
             VitalTile(title: demo.t("vital.heart"), value: demo.number(68), unit: demo.t("unit.bpm"), detail: demo.t("heart.lastReading", demo.date("jm")), symbol: "heart", color: p.pink) { sheet = .heart }
                 .accessibilityIdentifier("heart.open")
         }
-        if demo.hasSleep {
+        if realDay {
+            // Real sleep has its own card below; sample numbers are never shown beside a real band.
+            EmptyView()
+        } else if demo.hasSleep {
             VitalTile(title: demo.t("vital.sleep"), value: demo.t("duration.hm", demo.number(7), demo.number(32)), unit: "", detail: demo.t("sleep.total"), symbol: "moon", color: p.purple) { sheet = .sleep }
                 .accessibilityIdentifier("sleep.open")
         } else {
