@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Visual demo. No reminders are sent.";
 "profile.subtitle" = "Your rhythm. Your choices.";
 "profile.title" = "Your way.";
-"profile.version" = "FitΛ 0.5.2\nReal Bluetooth · other data is sample";
+"profile.version" = "FitΛ 0.6.0\nReal Bluetooth · other data is sample";
 "profile.welcome" = "Revisit welcome";
 "scenarios.subtitle" = "See how FitΛ handles each situation. These are visual examples; your band and iPhone permissions stay unchanged.";
 "scenarios.title" = "Explore scenarios";
@@ -239,7 +239,8 @@
 "live.log.empty" = "No events yet.";
 "live.lastSeen" = "Last contact: %@";
 "live.pairing.help" = "The iPhone keeps an old pairing for this band. Open Settings > Bluetooth, tap the (i) next to Galaxy Fit3, choose Forget This Device, restart the iPhone and search again.";
-"live.listen.sap" = "Listen to the Samsung accessory channel";
-"live.listen.sap.note" = "Experimental. The band sends a greeting and ends the connection after about 10 seconds if nobody answers.";
+"live.listen.sap" = "Samsung session (experimental)";
+"live.listen.sap.note" = "Answers the band's greeting and asks for the battery level. This is the only feature in which FitΛ sends data to the band.";
 "live.listen.autoOff" = "The band dropped the connection twice right after listening started. Listening was turned off to keep the heart rate flowing.";
 "live.battery.none" = "Battery level not reported by the band";
+"live.sap.ready" = "Samsung session active";

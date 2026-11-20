@@ -7,7 +7,8 @@ import Combine
 /// Scope, on purpose: discovery, connection, GATT enumeration, the standard
 /// Heart Rate / Battery / Device Information services, signal strength,
 /// reconnection and an exportable event log. Proprietary characteristics are
-/// only listened to (opt-in); this client never writes to the band.
+/// only listened to (opt-in). The single exception is the opt-in Samsung accessory
+/// session, which answers the band's greeting and asks for the battery level.
 enum BandPhase: Equatable {
     case idle, poweredOff, unauthorized, unsupported
     case scanning, connecting, discovering, connected, reconnecting, failed
@@ -66,6 +67,8 @@ final class BandLink: NSObject, ObservableObject {
     /// greets a listener there and drops the link when nobody answers.
     @Published private(set) var listenSAP = false
     @Published private(set) var listenAutoDisabled = false
+    /// The band accepted the session greeting; requests can be sent on the accessory channel.
+    @Published private(set) var sapReady = false
     /// iOS holds a stale bond for this band; only the user can clear it in Settings.
     @Published private(set) var needsForgetInSettings = false
 
@@ -76,6 +79,7 @@ final class BandLink: NSObject, ObservableObject {
         static let heartAt = "fitlambda.band.heart.at"
         static let listen = "fitlambda.band.listen-proprietary"
         static let listenSAP = "fitlambda.band.listen-sap"
+        static let sapMTU = "fitlambda.band.sap-mtu"
     }
 
     private static let heartService = CBUUID(string: "180D")
@@ -83,6 +87,8 @@ final class BandLink: NSObject, ObservableObject {
     private static let deviceInfoService = CBUUID(string: "180A")
     private static let samsungLinkService = CBUUID(string: "1A1A")
     private static let heartMeasurement = CBUUID(string: "2A37")
+    private static let sapNotify = CBUUID(string: "797AE4E9-2E58-4FE8-B48D-B5C79599FB9B")
+    private static let sapWrite = CBUUID(string: "63E30BAD-4206-4596-839F-E47CBF7A4B5D")
     private static let batteryLevel = CBUUID(string: "2A19")
     private static let infoFields: [CBUUID: BandInfoField] = [
         CBUUID(string: "2A29"): .manufacturer,
@@ -112,6 +118,12 @@ final class BandLink: NSObject, ObservableObject {
     private var scanTimer: Timer?
     private var connectTimer: Timer?
     private var rssiTimer: Timer?
+    private var sapWriteCharacteristic: CBCharacteristic?
+    private var sapMTU: Int?
+    private var sapPending: [UInt8] = []
+    private var sapPendingService: UInt8?
+    private var sapResumeTimer: Timer?
+    private var sapBatteryTimer: Timer?
 
     override init() {
         super.init()
@@ -203,6 +215,8 @@ final class BandLink: NSObject, ObservableObject {
         proprietaryFrames = 0
         lastSeen = nil
         needsForgetInSettings = false
+        defaults.removeObject(forKey: Keys.sapMTU)
+        sapMTU = nil
         note("Band forgotten on this iPhone")
     }
 
@@ -220,6 +234,7 @@ final class BandLink: NSObject, ObservableObject {
         defaults.set(enabled, forKey: Keys.listenSAP)
         listenAutoDisabled = false
         quickDrops = 0
+        if !enabled { endSAPSession() }
         applyListening(sap: true, enabled: enabled)
         note(enabled ? "Listening to the Samsung accessory channel (read-only)" : "Stopped listening to the Samsung accessory channel")
     }
@@ -357,6 +372,95 @@ final class BandLink: NSObject, ObservableObject {
         scanTimer?.invalidate()
         connectTimer?.invalidate()
         rssiTimer?.invalidate()
+        sapResumeTimer?.invalidate()
+        sapBatteryTimer?.invalidate()
+    }
+
+    // MARK: Samsung accessory session (the only place this client writes to the band)
+
+    private func endSAPSession() {
+        sapReady = false
+        sapPending = []
+        sapPendingService = nil
+        sapResumeTimer?.invalidate()
+        sapBatteryTimer?.invalidate()
+    }
+
+    private func handleSAP(_ bytes: [UInt8], from peripheral: CBPeripheral) {
+        if SapTransport.isHello(bytes) {
+            guard SapTransport.selfCheckPasses else {
+                note("SAP self-check failed; nothing was sent to the band")
+                return
+            }
+            guard let target = sapWriteCharacteristic else {
+                note("SAP greeting received but the write channel was not found")
+                return
+            }
+            let mtu = SapTransport.helloMTU(bytes)
+            sapMTU = mtu
+            defaults.set(mtu, forKey: Keys.sapMTU)
+            let kind: CBCharacteristicWriteType = target.properties.contains(.write) ? .withResponse : .withoutResponse
+            peripheral.writeValue(Data(SapTransport.helloReply(bytes)), for: target, type: kind)
+            note("SAP greeting answered (transport MTU \(mtu))")
+            startSAPSession()
+            return
+        }
+        guard let mtu = sapMTU, let fragment = SapTransport.parse(bytes, mtu: mtu) else {
+            note("SAP frame not understood (length or checksum)")
+            return
+        }
+        switch fragment.kind {
+        case 0:
+            if let service = fragment.service { deliverSAP(service: service, payload: fragment.payload) }
+        case 1:
+            sapPendingService = fragment.service
+            sapPending = fragment.payload
+        case 2:
+            if sapPending.count + fragment.payload.count <= 4096 { sapPending += fragment.payload }
+        default:
+            if let service = sapPendingService {
+                deliverSAP(service: service, payload: sapPending + fragment.payload)
+            }
+            sapPending = []
+            sapPendingService = nil
+        }
+    }
+
+    private func startSAPSession() {
+        sapResumeTimer?.invalidate()
+        sapReady = true
+        // The band is being answered now, so the hang-up guard no longer applies.
+        proprietarySubscribedAt = nil
+        quickDrops = 0
+        sendSAP(service: SapTransport.setupService, payload: SapTransport.watchInfoRequest, label: "watch info")
+        requestBattery()
+        sapBatteryTimer?.invalidate()
+        sapBatteryTimer = Timer.scheduledTimer(withTimeInterval: 180, repeats: true) { [weak self] _ in
+            self?.requestBattery()
+        }
+    }
+
+    func requestBattery() {
+        sendSAP(service: SapTransport.settingsService, payload: SapTransport.batteryRequest, label: "battery")
+    }
+
+    private func sendSAP(service: UInt8, payload: [UInt8], label: String) {
+        guard sapReady, SapTransport.selfCheckPasses, let mtu = sapMTU,
+              let target = sapWriteCharacteristic,
+              let peripheral, peripheral.state == .connected else { return }
+        let frame = SapTransport.frame(service: service, payload: payload, mtu: mtu)
+        let kind: CBCharacteristicWriteType = target.properties.contains(.write) ? .withResponse : .withoutResponse
+        peripheral.writeValue(Data(frame), for: target, type: kind)
+        note("SAP TX \(label) (service \(service)) \(Self.hex(Data(frame)))")
+    }
+
+    private func deliverSAP(service: UInt8, payload: [UInt8]) {
+        note("SAP RX service \(service) [\(payload.count)] \(Self.hex(Data(payload)))")
+        if service == SapTransport.settingsService,
+           let level = SapTransport.batteryLevel(fromSettingsReply: payload) {
+            if battery != level { note("Battery from the band: \(level)%") }
+            battery = level
+        }
     }
 
     private func note(_ text: String) {
@@ -409,6 +513,8 @@ extension BandLink: CBCentralManagerDelegate {
         case .poweredOff:
             note("Bluetooth is off")
             stopTimers()
+            endSAPSession()
+            sapWriteCharacteristic = nil
             peripheral = nil
             rssi = nil
             phase = .poweredOff
@@ -466,6 +572,8 @@ extension BandLink: CBCentralManagerDelegate {
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         rssiTimer?.invalidate()
+        endSAPSession()
+        sapWriteCharacteristic = nil
         rssi = nil
         lastSeen = Date()
         if userDisconnected {
@@ -519,6 +627,9 @@ extension BandLink: CBPeripheralDelegate {
             }
         }
         let proprietary = !Self.standardServices.contains(service.uuid)
+        if service.uuid == Self.samsungLinkService {
+            sapWriteCharacteristic = list.first(where: { $0.uuid == Self.sapWrite })
+        }
         for characteristic in list {
             if characteristic.uuid == Self.heartMeasurement, Self.canNotify(characteristic) {
                 peripheral.setNotifyValue(true, for: characteristic)
@@ -585,6 +696,13 @@ extension BandLink: CBPeripheralDelegate {
             }
         } else {
             proprietaryFrames += 1
+            if characteristic.uuid == Self.sapNotify, listenSAP {
+                if SapTransport.isHello([UInt8](data)) {
+                    note("RX \(characteristic.uuid.uuidString) [\(data.count)] \(Self.hex(data))")
+                }
+                handleSAP([UInt8](data), from: peripheral)
+                return
+            }
             note("RX \(characteristic.uuid.uuidString) [\(data.count)] \(Self.hex(data))")
         }
     }
@@ -598,6 +716,25 @@ extension BandLink: CBPeripheralDelegate {
                !Self.standardServices.contains(owner.uuid) {
                 proprietarySubscribedAt = Date()
             }
+            if characteristic.isNotifying, characteristic.uuid == Self.sapNotify, listenSAP, !sapReady {
+                // A link restored by iOS is already subscribed and the band does not greet
+                // again; continue with the transport size agreed last time.
+                sapResumeTimer?.invalidate()
+                sapResumeTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { [weak self] _ in
+                    guard let self, !self.sapReady, self.listenSAP else { return }
+                    let stored = self.defaults.integer(forKey: Keys.sapMTU)
+                    guard stored > 0, self.sapWriteCharacteristic != nil else { return }
+                    self.sapMTU = stored
+                    self.note("No greeting after subscribing; resuming the session with MTU \(stored)")
+                    self.startSAPSession()
+                }
+            }
+        }
+    }
+
+    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
+        if let error {
+            note("Write failed on \(characteristic.uuid.uuidString): \(error.localizedDescription)")
         }
     }
 

@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Démo visuelle. Aucun rappel n’est envoyé.";
 "profile.subtitle" = "Votre rythme. Vos choix.";
 "profile.title" = "À votre façon.";
-"profile.version" = "FitΛ 0.5.2\nBluetooth réel · autres données d’exemple";
+"profile.version" = "FitΛ 0.6.0\nBluetooth réel · autres données d’exemple";
 "profile.welcome" = "Revoir l’accueil";
 "scenarios.subtitle" = "Découvrez chaque situation dans FitΛ. Ces exemples visuels ne modifient ni le bracelet ni les autorisations de l’iPhone.";
 "scenarios.title" = "Explorer les scénarios";
@@ -239,7 +239,8 @@
 "live.log.empty" = "Aucun événement pour l’instant.";
 "live.lastSeen" = "Dernier contact : %@";
 "live.pairing.help" = "L’iPhone conserve un ancien jumelage de ce bracelet. Ouvrez Réglages > Bluetooth, touchez le (i) de Galaxy Fit3 puis Oublier cet appareil, redémarrez l’iPhone et relancez la recherche.";
-"live.listen.sap" = "Écouter le canal accessoire Samsung";
-"live.listen.sap.note" = "Expérimental. Le bracelet envoie une salutation et coupe la connexion au bout d’environ 10 secondes sans réponse.";
+"live.listen.sap" = "Session Samsung (expérimental)";
+"live.listen.sap.note" = "Répond à la salutation du bracelet et demande le niveau de batterie. C’est la seule fonction où FitΛ envoie des données au bracelet.";
 "live.listen.autoOff" = "Le bracelet a coupé la connexion deux fois juste après l’écoute. L’écoute a été désactivée pour conserver la fréquence cardiaque.";
 "live.battery.none" = "Batterie non indiquée par le bracelet";
+"live.sap.ready" = "Session Samsung active";

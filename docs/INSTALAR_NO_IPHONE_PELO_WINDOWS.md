@@ -30,4 +30,4 @@ Limites de um ID Apple gratuito: o app vale por 7 dias e precisa ser reinstalado
 6. Afaste a pulseira e volte: o estado deve passar por **Reconectando** e retornar a **Conectada** sozinho.
 7. Em **Registro técnico**, toque em **Compartilhar registro** e guarde o arquivo. Ele lista serviços, características e eventos, e é a evidência do Gate 1 do dossiê técnico.
 
-O app nunca escreve na pulseira. A opção **Escutar canais proprietários** apenas assina notificações; se o iPhone pedir pareamento ao ligá-la, a decisão é sua.
+Por padrão o app só lê. A opção **Escutar canais proprietários** apenas assina notificações. A opção **Sessão Samsung (experimental)** é a única que envia dados à pulseira: responde à saudação dela e pede o nível da bateria. Se a Fit3 aparecer na lista de Bluetooth dos Ajustes do iPhone e a conexão falhar, use **Esquecer Este Dispositivo**, reinicie o iPhone e procure de novo.

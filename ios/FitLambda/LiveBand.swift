@@ -213,6 +213,11 @@ struct LiveBandScreen: View {
                 set: { link.setListenSAP($0) }))
                 .font(.subheadline)
             Text(demo.t("live.listen.sap.note")).font(.caption).foregroundStyle(p.muted)
+            if link.sapReady {
+                Label(demo.t("live.sap.ready"), systemImage: "checkmark.seal")
+                    .font(.caption).foregroundStyle(p.accent)
+                    .accessibilityIdentifier("live.sap.ready")
+            }
             if link.listenAutoDisabled {
                 Text(demo.t("live.listen.autoOff")).font(.caption).foregroundStyle(p.pink)
             }

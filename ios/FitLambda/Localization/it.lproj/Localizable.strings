@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Demo visiva. Nessun promemoria viene inviato.";
 "profile.subtitle" = "Il tuo ritmo. Le tue scelte.";
 "profile.title" = "A modo tuo.";
-"profile.version" = "FitΛ 0.5.2\nBluetooth reale · altri dati di esempio";
+"profile.version" = "FitΛ 0.6.0\nBluetooth reale · altri dati di esempio";
 "profile.welcome" = "Rivedi il benvenuto";
 "scenarios.subtitle" = "Scopri come FitΛ presenta ogni situazione. Gli esempi non modificano il bracciale né i permessi dell’iPhone.";
 "scenarios.title" = "Esplora scenari";
@@ -239,7 +239,8 @@
 "live.log.empty" = "Ancora nessun evento.";
 "live.lastSeen" = "Ultimo contatto: %@";
 "live.pairing.help" = "L’iPhone conserva un vecchio abbinamento di questo bracciale. Apri Impostazioni > Bluetooth, tocca la (i) di Galaxy Fit3 e Dissocia questo dispositivo, riavvia l’iPhone e cerca di nuovo.";
-"live.listen.sap" = "Ascolta il canale accessorio Samsung";
-"live.listen.sap.note" = "Sperimentale. Il bracciale invia un saluto e chiude la connessione dopo circa 10 secondi se nessuno risponde.";
+"live.listen.sap" = "Sessione Samsung (sperimentale)";
+"live.listen.sap.note" = "Risponde al saluto del bracciale e chiede il livello della batteria. È l’unica funzione in cui FitΛ invia dati al bracciale.";
 "live.listen.autoOff" = "Il bracciale ha chiuso la connessione due volte subito dopo l’ascolto. L’ascolto è stato disattivato per mantenere la frequenza cardiaca.";
 "live.battery.none" = "Batteria non indicata dal bracciale";
+"live.sap.ready" = "Sessione Samsung attiva";

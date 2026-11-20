@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Visuelle Demo. Es werden keine Erinnerungen gesendet.";
 "profile.subtitle" = "Dein Rhythmus. Deine Entscheidungen.";
 "profile.title" = "Auf deine Art.";
-"profile.version" = "FitΛ 0.5.2\nEchtes Bluetooth · übrige Daten sind Beispiele";
+"profile.version" = "FitΛ 0.6.0\nEchtes Bluetooth · übrige Daten sind Beispiele";
 "profile.welcome" = "Begrüßung erneut ansehen";
 "scenarios.subtitle" = "Sieh dir an, wie FitΛ mit Situationen umgeht. Die Beispiele ändern weder dein Armband noch die iPhone-Berechtigungen.";
 "scenarios.title" = "Szenarien erkunden";
@@ -239,7 +239,8 @@
 "live.log.empty" = "Noch keine Ereignisse.";
 "live.lastSeen" = "Letzter Kontakt: %@";
 "live.pairing.help" = "Das iPhone hat eine alte Kopplung für dieses Band gespeichert. Öffne Einstellungen > Bluetooth, tippe auf das (i) neben Galaxy Fit3 und auf Dieses Gerät ignorieren, starte das iPhone neu und suche erneut.";
-"live.listen.sap" = "Samsung-Zubehörkanal mithören";
-"live.listen.sap.note" = "Experimentell. Das Band sendet eine Begrüßung und trennt die Verbindung nach etwa 10 Sekunden, wenn niemand antwortet.";
+"live.listen.sap" = "Samsung-Sitzung (experimentell)";
+"live.listen.sap.note" = "Beantwortet die Begrüßung des Bands und fragt den Akkustand ab. Nur in dieser Funktion sendet FitΛ Daten an das Band.";
 "live.listen.autoOff" = "Das Band hat die Verbindung zweimal direkt nach dem Mithören getrennt. Das Mithören wurde ausgeschaltet, damit die Herzfrequenz weiterläuft.";
 "live.battery.none" = "Akkustand wird vom Band nicht gemeldet";
+"live.sap.ready" = "Samsung-Sitzung aktiv";
