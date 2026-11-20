@@ -1,5 +1,6 @@
 import Foundation
 import CoreBluetooth
+import MediaPlayer
 import Combine
 
 /// Real Bluetooth LE link to the band. Nothing in this file is simulated.
@@ -83,7 +84,13 @@ final class BandLink: NSObject, ObservableObject {
     @Published private(set) var sleepStages: Set<SapHealth.SleepStage> = []
     /// Notifications waiting for the band to be reachable.
     @Published private(set) var pendingNotifications = 0
-    private var notificationQueue: [(title: String, text: String, kind: SapNotify.Kind, at: Date)] = []
+    private var notificationQueue: [(title: String, text: String, kind: SapNotify.Kind, app: String, at: Date)] = []
+    /// Apple Music control from the band's music screen.
+    @Published private(set) var musicControl = false
+    private var music: MusicBridge?
+    private var lastMediaIdentity = ""
+    private var lastMediaPlayback = 0
+    private var mediaAnnounced = false
     /// Watch faces installed on the band, as it reports them, and the one in use.
     @Published private(set) var faces: [SapTransport.BandFace] = []
     @Published private(set) var currentFaceID: Int?
@@ -112,6 +119,7 @@ final class BandLink: NSObject, ObservableObject {
         static let sleepEpisodes = "fitlambda.band.sleep-episodes"
         static let sleepStages = "fitlambda.band.sleep-stages"
         static let noticeSequence = "fitlambda.band.notice-sequence"
+        static let music = "fitlambda.band.music"
     }
 
     private static let heartService = CBUUID(string: "180D")
@@ -171,6 +179,7 @@ final class BandLink: NSObject, ObservableObject {
         healthEnabled = defaults.bool(forKey: Keys.health)
         rightWrist = defaults.bool(forKey: Keys.wrist)
         bandLanguage = defaults.string(forKey: Keys.language)
+        if defaults.bool(forKey: Keys.music), MPMediaLibrary.authorizationStatus() == .authorized { startMusic() }
         if let stored = defaults.data(forKey: Keys.steps),
            let decoded = try? JSONDecoder().decode([Int: SapHealth.StepInterval].self, from: stored) {
             stepRecords = decoded
@@ -512,11 +521,88 @@ final class BandLink: NSObject, ObservableObject {
         if let data = try? JSONEncoder().encode(sleepStages) { defaults.set(data, forKey: Keys.sleepStages) }
     }
 
+    // MARK: Music
+
+    func setMusicControl(_ enabled: Bool) {
+        guard enabled else {
+            defaults.set(false, forKey: Keys.music)
+            musicControl = false
+            music = nil
+            if mediaAnnounced { sendSAP(service: SapMedia.service, payload: SapMedia.playerAvailable(false), label: "music off") }
+            mediaAnnounced = false
+            return
+        }
+        MPMediaLibrary.requestAuthorization { [weak self] status in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                guard status == .authorized else {
+                    self.note("Apple Music access was not granted; music control stays off")
+                    return
+                }
+                self.defaults.set(true, forKey: Keys.music)
+                self.startMusic()
+                self.syncMedia(force: true)
+            }
+        }
+    }
+
+    private func startMusic() {
+        let bridge = MusicBridge()
+        bridge.onChange = { [weak self] in self?.syncMedia(force: false) }
+        music = bridge
+        musicControl = true
+    }
+
+    /// Tells the band what is playing when it changed (or always, when forced).
+    private func syncMedia(force: Bool) {
+        guard let music, sapReady else { return }
+        let state = music.state
+        if !mediaAnnounced || force {
+            sendSAP(service: SapMedia.service, payload: SapMedia.playerAvailable(true), label: "music player")
+            mediaAnnounced = true
+        }
+        if force || state.identity != lastMediaIdentity {
+            sendSAP(service: SapMedia.service, payload: SapMedia.metadata(state), label: "music track")
+            sendSAP(service: SapMedia.service, payload: SapMedia.playback(state), label: "music state")
+        } else if state.playback != lastMediaPlayback {
+            sendSAP(service: SapMedia.service, payload: SapMedia.playback(state), label: "music state")
+        }
+        lastMediaIdentity = state.identity
+        lastMediaPlayback = state.playback
+    }
+
+    private func handleMedia(_ payload: [UInt8]) {
+        guard let music else { return }
+        if let command = SapMedia.remote(payload) {
+            // One press arrives as two packets; act on the press only.
+            guard command.pressed else { return }
+            music.perform(command.action)
+            note("Music command from the band: \(command.action)")
+            for delay in [0.2, 0.7] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.syncMedia(force: delay > 0.5) }
+            }
+            return
+        }
+        switch SapMedia.requestID(payload) {
+        case 1:
+            sendSAP(service: SapMedia.service, payload: SapMedia.screenAnswer(SapMedia.screenState(payload)), label: "music screen")
+            syncMedia(force: !mediaAnnounced)
+        case 2: sendSAP(service: SapMedia.service, payload: SapMedia.metadata(music.state), label: "music track")
+        case 3: sendSAP(service: SapMedia.service, payload: SapMedia.playback(music.state), label: "music state")
+        case 5: sendSAP(service: SapMedia.service, payload: SapMedia.capability(), label: "music capability")
+        case 6: sendSAP(service: SapMedia.service, payload: SapMedia.volume(music.volume), label: "music volume")
+        case 7: note("Volume change asked on the band: iOS does not let an app change the system volume")
+        case 8: sendSAP(service: SapMedia.service, payload: SapMedia.appInfo(), label: "music app")
+        case 9: sendSAP(service: SapMedia.service, payload: SapMedia.emptyQueue(), label: "music queue")
+        default: break
+        }
+    }
+
     // MARK: Notifications on the band
 
     /// Shows a notification on the band, now or as soon as the band is reachable (up to two minutes).
-    func sendNotification(title: String, text: String, kind: SapNotify.Kind) {
-        notificationQueue.append((title, text, kind, Date()))
+    func sendNotification(title: String, text: String, kind: SapNotify.Kind, app: String = "") {
+        notificationQueue.append((title, text, kind, app, Date()))
         pendingNotifications = notificationQueue.count
         flushNotifications()
     }
@@ -532,7 +618,7 @@ final class BandLink: NSObject, ObservableObject {
             sequence = (sequence <= 0 || sequence >= Int32.max - 1) ? 1 : sequence + 1
             defaults.set(Int(sequence), forKey: Keys.noticeSequence)
             sendSAP(service: SapNotify.service,
-                    payload: SapNotify.notification(sequence: sequence, title: item.title, text: item.text, kind: item.kind, at: item.at),
+                    payload: SapNotify.notification(sequence: sequence, title: item.title, text: item.text, kind: item.kind, app: item.app, at: item.at),
                     label: "notification \(sequence)")
         }
         notificationQueue = []
@@ -793,6 +879,7 @@ final class BandLink: NSObject, ObservableObject {
         sendSAP(service: SapTransport.faceService, payload: SapTransport.faceInstalledRequest, label: "installed faces")
         sendSAP(service: SapTransport.faceService, payload: SapTransport.faceAllInfoRequest, label: "face summary")
         sendSAP(service: SapNotify.service, payload: SapNotify.capabilityRequest, label: "notification capability")
+        mediaAnnounced = false
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.flushNotifications() }
         sapBatteryTimer?.invalidate()
         sapBatteryTimer = Timer.scheduledTimer(withTimeInterval: 180, repeats: true) { [weak self] _ in
@@ -831,6 +918,7 @@ final class BandLink: NSObject, ObservableObject {
             bandInitialized = initialized
         }
         if service == SapHealth.service, healthEnabled { handleHealth(payload) }
+        if service == SapMedia.service, musicControl { handleMedia(payload) }
         if service == SapNotify.service, let answer = SapNotify.acknowledgement(payload) {
             note(answer.accepted ? "Notification \(answer.sequence) shown on the band" : "Notification \(answer.sequence) refused by the band")
         }

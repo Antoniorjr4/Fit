@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Visuelle Demo. Es werden keine Erinnerungen gesendet.";
 "profile.subtitle" = "Dein Rhythmus. Deine Entscheidungen.";
 "profile.title" = "Auf deine Art.";
-"profile.version" = "FitΛ 0.11.0\nEchtes Bluetooth · übrige Daten sind Beispiele";
+"profile.version" = "FitΛ 0.12.0\nEchtes Bluetooth · übrige Daten sind Beispiele";
 "profile.welcome" = "Begrüßung erneut ansehen";
 "scenarios.subtitle" = "Sieh dir an, wie FitΛ mit Situationen umgeht. Die Beispiele ändern weder dein Armband noch die iPhone-Berechtigungen.";
 "scenarios.title" = "Szenarien erkunden";
@@ -270,7 +270,7 @@
 "sleep.real.periodOnly" = "Das Band hat nur den Schlafzeitraum gesendet; die Phasen folgen bei einer späteren Synchronisierung.";
 "sleep.real.empty" = "Schlafe mit dem Band. Dein Schlaf erscheint hier nach der Synchronisierung am Morgen.";
 "live.notify.title" = "Mitteilungen auf dem Band";
-"live.notify.note" = "iOS lässt eine App keine Mitteilungen anderer Apps lesen. Für SMS, iMessage und E-Mail: Kurzbefehle → Automation → Nachricht (oder E-Mail) → Aktion „An Galaxy Fit3 senden“.";
+"live.notify.note" = "Erstelle in Kurzbefehle eine Automation mit der Aktion „An Galaxy Fit3 senden“. Die Auslöser Nachricht und E-Mail gehen mit jedem iOS; unter iOS 27 deckt der Auslöser Mitteilung WhatsApp, Telegram und andere Apps ab (Titel und Text an die Aktion übergeben).";
 "live.notify.test" = "Testmitteilung senden";
 "live.notify.sample" = "Testmitteilung vom iPhone";
 "intent.send.title" = "An Galaxy Fit3 senden";
@@ -282,3 +282,6 @@
 "intent.kind.message" = "Nachricht";
 "intent.kind.mail" = "E-Mail";
 "intent.kind.other" = "Andere";
+"live.music" = "Musiksteuerung (Apple Music)";
+"live.music.note" = "Der Musikbildschirm des Bands zeigt den Titel und steuert Wiedergabe, Pause und Überspringen in der Musik-App. iOS erlaubt keine Steuerung von Spotify oder YouTube und keine Lautstärkeänderung.";
+"intent.param.app" = "Quell-App";

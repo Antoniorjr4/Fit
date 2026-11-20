@@ -28,11 +28,15 @@ struct SendToBandIntent: AppIntent {
     @Parameter(title: "intent.param.kind", default: .message)
     var kind: BandNoticeKind
 
+    /// Name of the app the notification came from (for the iOS 27 notification automation).
+    @Parameter(title: "intent.param.app", default: "")
+    var app: String
+
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<Bool> {
         let link = BandLink.shared
         let mapped: SapNotify.Kind = kind == .message ? .message : (kind == .mail ? .mail : .other)
-        link.sendNotification(title: title.isEmpty ? mapped.appName : title, text: message, kind: mapped)
+        link.sendNotification(title: title.isEmpty ? (app.isEmpty ? mapped.appName : app) : title, text: message, kind: mapped, app: app)
         // The app may have just been woken in the background: give the band up to 20 s to reconnect.
         var waited = 0
         while link.pendingNotifications > 0, waited < 40 {

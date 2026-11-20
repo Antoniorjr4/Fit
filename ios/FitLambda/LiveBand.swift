@@ -504,6 +504,13 @@ struct LiveBandScreen: View {
                     set: { link.setHealthEnabled($0) }))
                     .font(.subheadline)
                 Text(demo.t("live.health.note")).font(.caption).foregroundStyle(p.muted)
+                Divider()
+                Toggle(demo.t("live.music"), isOn: Binding(
+                    get: { link.musicControl },
+                    set: { link.setMusicControl($0) }))
+                    .font(.subheadline)
+                    .accessibilityIdentifier("live.music")
+                Text(demo.t("live.music.note")).font(.caption).foregroundStyle(p.muted)
                 if link.healthBatches > 0 {
                     Text(demo.t("live.health.batches", demo.number(link.healthBatches)))
                         .font(.caption).foregroundStyle(p.accent)
