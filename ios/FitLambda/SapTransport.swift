@@ -16,6 +16,11 @@ enum SapTransport {
     static let setupService: UInt8 = 1
     static let batteryRequest: [UInt8] = [0x02]
     static let callService: UInt8 = 3
+    static let faceService: UInt8 = 6
+    /// Read-only watch face questions: catalogue summary, installed list, current face.
+    static let faceAllInfoRequest: [UInt8] = [0x00]
+    static let faceInstalledRequest: [UInt8] = [0x01]
+    static let faceCurrentRequest: [UInt8] = [0x02]
     static let callEnable: [UInt8] = [0x08, 0x01]
     static let callRinging: [UInt8] = [0x03, 0x01]
     static let callAnswered: [UInt8] = [0x03, 0x02]

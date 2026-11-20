@@ -508,6 +508,11 @@ final class BandLink: NSObject, ObservableObject {
         quickDrops = 0
         sendSAP(service: SapTransport.setupService, payload: SapTransport.watchInfoRequest, label: "watch info")
         requestBattery()
+        // Read-only questions about the watch faces already on the band. The answers are
+        // only logged for now; the face picker will be built from what a real band reports.
+        sendSAP(service: SapTransport.faceService, payload: SapTransport.faceCurrentRequest, label: "current face")
+        sendSAP(service: SapTransport.faceService, payload: SapTransport.faceInstalledRequest, label: "installed faces")
+        sendSAP(service: SapTransport.faceService, payload: SapTransport.faceAllInfoRequest, label: "face summary")
         sapBatteryTimer?.invalidate()
         sapBatteryTimer = Timer.scheduledTimer(withTimeInterval: 180, repeats: true) { [weak self] _ in
             self?.requestBattery()
@@ -529,7 +534,7 @@ final class BandLink: NSObject, ObservableObject {
     }
 
     private func deliverSAP(service: UInt8, payload: [UInt8]) {
-        note("SAP RX service \(service) [\(payload.count)] \(Self.hex(Data(payload)))")
+        note("SAP RX service \(service) [\(payload.count)] \(Self.hex(Data(payload), limit: 2048))")
         if service == SapTransport.settingsService,
            let level = SapTransport.batteryLevel(fromSettingsReply: payload) {
             if battery != level { note("Battery from the band: \(level)%") }
