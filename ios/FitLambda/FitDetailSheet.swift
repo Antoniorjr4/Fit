@@ -126,7 +126,7 @@ struct FitDetailSheet: View {
             PrimaryAction(title: demo.t("name.save"), symbol: "checkmark") { saveName() }
                 .disabled(draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityIdentifier("name.save")
-        case .language, .scenarios, .permissions, .diagnostics:
+        case .language, .scenarios, .permissions, .diagnostics, .live:
             EmptyView() // These routes use dedicated sheets in FitLambdaRoot.
         }
     }

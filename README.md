@@ -10,8 +10,10 @@ O design usa grafite, verde-lima e um modo claro em branco suave. A primeira eta
 - Base SwiftUI para iOS 17 ou posterior.
 - Interface 0.3.0 com controles ampliados, ajuste de meta por +/− e layouts adaptados a texto ampliado.
 - Compilação e nove execuções de testes aprovadas no GitHub Actions, sem Mac local: sete no iPhone 16 Pro Max e duas no iPhone SE (3ª geração), ambos com iOS 18.5. [Execução validada](https://github.com/Antoniorjr4/Fit/actions/runs/43851101290) · [Capturas nativas e evidências](docs/validation/ui-0.3.0/README.md).
-- Bluetooth, sincronização com a Fit3, HealthKit e envio de mostradores ainda não implementados.
-- O artefato de simulador não é uma IPA instalável no iPhone.
+- **0.5.0:** conexão Bluetooth LE real (Core Bluetooth) na aba Pulseira: busca, conexão, leitura dos serviços, batimentos pelo serviço padrão 0x180D, bateria, sinal, reconexão automática e registro técnico exportável. O app só lê; não envia comandos à pulseira.
+- Passos, sono e histórico continuam sendo dados de exemplo. O protocolo proprietário da Samsung, HealthKit e mostradores não estão implementados.
+- O workflow **FitLambda - iPhone device build** gera um `.ipa` sem assinatura. [Como instalar no iPhone pelo Windows](docs/INSTALAR_NO_IPHONE_PELO_WINDOWS.md).
+- A conexão real ainda não foi exercitada em um iPhone físico com a Fit3; o simulador não tem rádio Bluetooth.
 
 ## Compilar e ver o app sem Mac local
 

@@ -1,7 +1,7 @@
 import SwiftUI
 import Combine
 
-/// Visual-only state. No CoreBluetooth, HealthKit or real health data.
+/// Sample data and preferences for the interface. The real Bluetooth link lives in BandLink.
 final class DemoStore: ObservableObject {
     private static let languageKey = "fitlambda.selected-language"
     @Published private(set) var language: AppLanguage

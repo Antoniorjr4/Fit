@@ -3,12 +3,13 @@ import Charts
 
 enum FitTab: Hashable { case today, trends, band, profile }
 enum FitSheet: String, Identifiable {
-    case goal, heart, sleep, welcome, pairing, faces, health, privacy, sync, name, language, scenarios, permissions, diagnostics
+    case goal, heart, sleep, welcome, pairing, faces, health, privacy, sync, name, language, scenarios, permissions, diagnostics, live
     var id: String { rawValue }
 }
 
 struct FitLambdaRoot: View {
     @EnvironmentObject private var demo: DemoStore
+    @EnvironmentObject private var link: BandLink
     @Environment(\.colorScheme) private var scheme
     @State private var tab: FitTab = .today
     @State private var sheet: FitSheet?
@@ -35,10 +36,12 @@ struct FitLambdaRoot: View {
                         .interactiveDismissDisabled()
                 case .permissions: PermissionsScreen()
                 case .diagnostics: BandDiagnosticsScreen()
+                case .live: LiveBandScreen()
                 default: FitDetailSheet(kind: item)
                 }
             }
             .environmentObject(demo)
+            .environmentObject(link)
             .environment(\.locale, demo.language.locale)
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -113,6 +116,7 @@ struct PrimaryAction: View {
 
 struct TodayScreen: View {
     @EnvironmentObject private var demo: DemoStore
+    @EnvironmentObject private var link: BandLink
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var textSize
     @Binding var tab: FitTab
@@ -198,8 +202,14 @@ struct TodayScreen: View {
             : AnyLayout(HStackLayout(spacing: 8))
     }
     @ViewBuilder private var vitalCards: some View {
-        VitalTile(title: demo.t("vital.heart"), value: demo.number(68), unit: demo.t("unit.bpm"), detail: demo.t("heart.lastReading", demo.date("jm")), symbol: "heart", color: p.pink) { sheet = .heart }
-            .accessibilityIdentifier("heart.open")
+        if let heart = link.heart {
+            // A reading received from the band over Bluetooth, with its own time.
+            VitalTile(title: demo.t("vital.heart"), value: demo.number(heart.bpm), unit: demo.t("unit.bpm"), detail: demo.t("live.heart.detail", demo.stamp(heart.at)), symbol: "heart.fill", color: p.pink) { sheet = .live }
+                .accessibilityIdentifier("heart.live")
+        } else {
+            VitalTile(title: demo.t("vital.heart"), value: demo.number(68), unit: demo.t("unit.bpm"), detail: demo.t("heart.lastReading", demo.date("jm")), symbol: "heart", color: p.pink) { sheet = .heart }
+                .accessibilityIdentifier("heart.open")
+        }
         if demo.hasSleep {
             VitalTile(title: demo.t("vital.sleep"), value: demo.t("duration.hm", demo.number(7), demo.number(32)), unit: "", detail: demo.t("sleep.total"), symbol: "moon", color: p.purple) { sheet = .sleep }
                 .accessibilityIdentifier("sleep.open")
@@ -397,6 +407,7 @@ struct BandIllustration: View {
 
 struct BandScreen: View {
     @EnvironmentObject private var demo: DemoStore
+    @EnvironmentObject private var link: BandLink
     @Environment(\.colorScheme) private var scheme
     @Binding var sheet: FitSheet?
     var body: some View {
@@ -405,11 +416,16 @@ struct BandScreen: View {
             Text(demo.t("band.title")).font(.largeTitle.weight(.semibold)).tracking(-1.2)
                 .accessibilityIdentifier("band.title")
             Text(demo.t("band.subtitle")).font(.subheadline).foregroundStyle(Palette(scheme).muted)
+            LiveBandCard(sheet: $sheet)
             BandConnectionPanel(sheet: $sheet)
             BandIllustration(face: demo.face).frame(maxWidth: .infinity)
             VStack(spacing: 8) {
                 Text("Galaxy Fit3").font(.title2.weight(.semibold))
-                Label(demo.hasMetrics ? demo.t("band.battery", demo.percent(0.78)) : demo.t("band.noBattery"), systemImage: "battery.75percent").font(.caption)
+                if let battery = link.battery {
+                    Label(demo.t("live.battery", demo.percent(Double(battery) / 100)), systemImage: "battery.75percent").font(.caption)
+                } else {
+                    Label(demo.hasMetrics ? demo.t("band.battery", demo.percent(0.78)) : demo.t("band.noBattery"), systemImage: "battery.75percent").font(.caption)
+                }
             }.frame(maxWidth: .infinity)
             Card {
                 Button { sheet = .faces } label: { RowLabel(title: demo.t("band.style"), symbol: "paintpalette") }

@@ -357,6 +357,19 @@ final class InterfaceJourneyTests: XCTestCase {
         }
     }
 
+    func testLiveBandScreenStartsIdleWithoutTouchingTheRadio() {
+        launch()
+        selectTab("Pulseira", title: "band.title")
+        XCTAssertEqual(element("live.status").label, "Nenhuma pulseira conectada ao iPhone")
+        XCTAssertEqual(element("band.status").label, "Nenhuma pulseira conectada")
+        tap("live.open")
+        expectSheet("live")
+        XCTAssertEqual(element("live.phase").label, "Nenhuma pulseira conectada ao iPhone")
+        XCTAssertTrue(app.buttons["live.scan"].exists)
+        capture("live-band-idle")
+        closeSheet()
+    }
+
     private func chooseScenario(_ code: String) {
         selectTab(3, title: "profile.title")
         tap("scenarios.open")

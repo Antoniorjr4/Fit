@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct FitLambdaApp: App {
     @StateObject private var demo = DemoStore()
+    @StateObject private var link = BandLink()
     var body: some Scene {
         WindowGroup {
             Group {
@@ -13,6 +14,7 @@ struct FitLambdaApp: App {
                 }
             }
                 .environmentObject(demo)
+                .environmentObject(link)
                 .environment(\.locale, demo.language.locale)
                 .preferredColorScheme(demo.isDark ? .dark : .light)
                 .modifier(PreviewTextSize())

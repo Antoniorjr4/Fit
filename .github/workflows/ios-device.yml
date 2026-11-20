@@ -58,4 +58,24 @@ jobs:
           test "$(lipo -archs "$app/FitLambda")" = arm64
           test "$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$app/Info.plist")" = 17.0
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app/Info.plist")" = iPhoneOS
-          echo "Unsigned iPhone Release archive verified (arm64, iOS 17.0 minimum)."
+          test "$(/usr/libexec/PlistBuddy -c 'Print :UIBackgroundModes:0' "$app/Info.plist")" = bluetooth-central
+          /usr/libexec/PlistBuddy -c 'Print :NSBluetoothAlwaysUsageDescription' "$app/Info.plist"
+          echo "Unsigned iPhone Release archive verified (arm64, iOS 17.0 minimum, Bluetooth declared)."
+      - name: Package the unsigned IPA
+        run: |
+          # An unsigned IPA cannot be opened directly on an iPhone. A signing
+          # tool (for example Sideloadly on Windows) signs it with the user's
+          # own Apple ID while installing it over USB.
+          app="$RUNNER_TEMP/FitLambda.xcarchive/Products/Applications/FitLambda.app"
+          version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Info.plist")"
+          rm -rf "$RUNNER_TEMP/ipa" && mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$app" "$RUNNER_TEMP/ipa/Payload/"
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "FitLambda-$version-unsigned.ipa" Payload && rm -rf Payload)
+          ls -lh "$RUNNER_TEMP/ipa"
+      - name: Save the unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: FitLambda-iPhone-unsigned-${{ github.run_number }}
+          path: ${{ runner.temp }}/ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 30

@@ -20,11 +20,14 @@ targets:
         PRODUCT_NAME: FitLambda
         INFOPLIST_KEY_CFBundleDisplayName: FitΛ
         GENERATE_INFOPLIST_FILE: YES
+        # Merged with the generated keys; holds the Bluetooth background mode.
+        INFOPLIST_FILE: Config/FitLambda-Info.plist
+        INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "FitLambda uses Bluetooth to find your Galaxy Fit3 and read its data."
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         TARGETED_DEVICE_FAMILY: "1"
-        MARKETING_VERSION: "0.4.0"
-        CURRENT_PROJECT_VERSION: "4"
+        MARKETING_VERSION: "0.5.0"
+        CURRENT_PROJECT_VERSION: "5"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     scheme:
       gatherCoverageData: false
