@@ -124,6 +124,11 @@ struct TodayScreen: View {
         return Date().formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(demo.language.locale))
     }
 
+    /// With a real band linked, movement shows what the band sent today and never the sample numbers.
+    private var realDay: Bool { link.hasRememberedBand }
+    private var totals: BandLink.StepTotals? { link.stepTotals() }
+    private var shownSteps: Int { realDay ? (totals?.steps ?? 0) : demo.steps }
+
     private var greetingKey: String {
         guard link.hasRememberedBand else { return "today.greeting" }
         let hour = Calendar.current.component(.hour, from: Date())
@@ -182,19 +187,24 @@ struct TodayScreen: View {
                         }.accessibilityLabel(demo.t("goal.edit"))
                             .accessibilityIdentifier("goal.open")
                     }
-                    ActivityArc(steps: demo.steps, goal: demo.goal)
-                    Text(demo.goal > Double(demo.steps)
-                         ? demo.t("today.remaining", demo.number(Int(demo.goal) - demo.steps))
+                    ActivityArc(steps: shownSteps, goal: demo.goal)
+                    Text(demo.goal > Double(shownSteps)
+                         ? demo.t("today.remaining", demo.number(Int(demo.goal) - shownSteps))
                          : demo.t("today.goalReached"))
                         .font(.caption).foregroundStyle(p.muted).frame(maxWidth: .infinity)
                     Divider()
                     statsLayout {
-                        Stat(value: demo.decimal(5.8), unit: "km", label: demo.t("stat.distance"))
+                        Stat(value: demo.decimal(realDay ? (totals?.distanceMeters ?? 0) / 1000 : 5.8), unit: "km", label: demo.t("stat.distance"))
                         Divider()
-                        Stat(value: demo.number(382), unit: "kcal", label: demo.t("stat.energy"))
+                        Stat(value: demo.number(realDay ? Int((totals?.calories ?? 0).rounded()) : 382), unit: "kcal", label: demo.t("stat.energy"))
                         Divider()
-                        Stat(value: demo.number(42), unit: "min", label: demo.t("stat.active"))
+                        Stat(value: demo.number(realDay ? (totals?.activeMinutes ?? 0) : 42), unit: "min", label: demo.t("stat.active"))
                     }.fixedSize(horizontal: false, vertical: true)
+                    if realDay {
+                        Text(demo.t(totals == nil ? "today.real.waiting" : "today.real.note"))
+                            .font(.caption).foregroundStyle(p.muted)
+                            .accessibilityIdentifier("today.real.note")
+                    }
                 }
                 Text(demo.t("today.body")).font(.headline)
                 if textSize.isAccessibilitySize {
@@ -439,6 +449,7 @@ struct BandScreen: View {
                 .accessibilityIdentifier("band.title")
             Text(demo.t("band.subtitle")).font(.subheadline).foregroundStyle(Palette(scheme).muted)
             LiveBandCard(sheet: $sheet)
+            if !link.faces.isEmpty { BandFacesCard() }
             BandConnectionPanel(sheet: $sheet)
             BandIllustration(face: demo.face).frame(maxWidth: .infinity)
             VStack(spacing: 8) {

@@ -74,6 +74,12 @@ final class BandLink: NSObject, ObservableObject {
     /// Answer the band's health capability questions (experimental, opt-in).
     @Published private(set) var healthEnabled = false
     @Published private(set) var healthBatches = 0
+    /// Step intervals received from the band, keyed by their start time (seconds since 1970).
+    @Published private(set) var stepRecords: [Int: SapHealth.StepInterval] = [:]
+    /// Watch faces installed on the band, as it reports them, and the one in use.
+    @Published private(set) var faces: [SapTransport.BandFace] = []
+    @Published private(set) var currentFaceID: Int?
+    @Published private(set) var rightWrist = false
     /// Whether the band reports having been through first-run setup; nil until it answers.
     @Published private(set) var bandInitialized: Bool?
     /// iOS holds a stale bond for this band; only the user can clear it in Settings.
@@ -89,6 +95,8 @@ final class BandLink: NSObject, ObservableObject {
         static let sapMTU = "fitlambda.band.sap-mtu"
         static let callAlerts = "fitlambda.band.call-alerts"
         static let health = "fitlambda.band.health"
+        static let steps = "fitlambda.band.steps"
+        static let wrist = "fitlambda.band.right-wrist"
     }
 
     private static let heartService = CBUUID(string: "180D")
@@ -134,6 +142,7 @@ final class BandLink: NSObject, ObservableObject {
     private var sapResumeTimer: Timer?
     private var sapBatteryTimer: Timer?
     private var callMonitor: CallMonitor?
+    private var healthLarge = SapHealth.LargeData()
     private var bandRinging = false
     private var testRingTimer: Timer?
     /// Text the band shows for a call; iOS does not reveal the caller.
@@ -145,6 +154,11 @@ final class BandLink: NSObject, ObservableObject {
         listenSAP = defaults.bool(forKey: Keys.listenSAP)
         callAlerts = defaults.bool(forKey: Keys.callAlerts)
         healthEnabled = defaults.bool(forKey: Keys.health)
+        rightWrist = defaults.bool(forKey: Keys.wrist)
+        if let stored = defaults.data(forKey: Keys.steps),
+           let decoded = try? JSONDecoder().decode([Int: SapHealth.StepInterval].self, from: stored) {
+            stepRecords = decoded
+        }
         if callAlerts { startCallMonitor() }
         let bpm = defaults.integer(forKey: Keys.heartBPM)
         let at = defaults.double(forKey: Keys.heartAt)
@@ -233,6 +247,8 @@ final class BandLink: NSObject, ObservableObject {
         lastSeen = nil
         needsForgetInSettings = false
         defaults.removeObject(forKey: Keys.sapMTU)
+        defaults.removeObject(forKey: Keys.steps)
+        stepRecords = [:]
         sapMTU = nil
         note("Band forgotten on this iPhone")
     }
@@ -395,6 +411,102 @@ final class BandLink: NSObject, ObservableObject {
 
     // MARK: Samsung accessory session (the only place this client writes to the band)
 
+    struct StepTotals {
+        let steps: Int
+        let distanceMeters: Double
+        let calories: Double
+        let activeMinutes: Int
+    }
+
+    /// Sum of the step intervals that started on the given local day; nil when there are none.
+    func stepTotals(on day: Date = Date()) -> StepTotals? {
+        let calendar = Calendar.current
+        let begin = Int(calendar.startOfDay(for: day).timeIntervalSince1970)
+        let end = begin + 86_400
+        let today = stepRecords.values.filter { $0.start >= begin && $0.start < end }
+        guard !today.isEmpty else { return nil }
+        return StepTotals(steps: today.reduce(0) { $0 + $1.steps },
+                          distanceMeters: today.reduce(0) { $0 + $1.distanceMeters },
+                          calories: today.reduce(0) { $0 + $1.calories },
+                          activeMinutes: today.reduce(0) { $0 + $1.durationMillis } / 60_000)
+    }
+
+    private func store(_ intervals: [SapHealth.StepInterval]) {
+        var merged = stepRecords
+        for interval in intervals { merged[interval.start] = interval }
+        // Two weeks is enough for the day view; older intervals are dropped.
+        let cutoff = Int(Date().timeIntervalSince1970) - 14 * 86_400
+        merged = merged.filter { $0.key >= cutoff }
+        stepRecords = merged
+        if let data = try? JSONEncoder().encode(merged) { defaults.set(data, forKey: Keys.steps) }
+    }
+
+    /// Keeps every raw health batch on the phone before the band is told it was received,
+    /// so data types this version cannot read yet are not lost.
+    private func archive(_ payload: [UInt8]) -> Bool {
+        let manager = FileManager.default
+        guard let folder = try? manager.url(for: .applicationSupportDirectory, in: .userDomainMask,
+                                            appropriateFor: nil, create: true) else { return false }
+        let file = folder.appendingPathComponent("health-batches.log")
+        let stamp = ISO8601DateFormatter().string(from: Date())
+        let line = stamp + " " + payload.map { String(format: "%02X", $0) }.joined() + "\n"
+        guard let data = line.data(using: .utf8) else { return false }
+        if !manager.fileExists(atPath: file.path) { return manager.createFile(atPath: file.path, contents: data) }
+        guard let handle = try? FileHandle(forWritingTo: file) else { return false }
+        defer { try? handle.close() }
+        do {
+            try handle.seekToEnd()
+            try handle.write(contentsOf: data)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    private func handleHealth(_ payload: [UInt8]) {
+        guard SapHealth.selfCheckPasses else { return }
+        var message = payload
+        if SapHealth.LargeData.isChunk(payload) {
+            let result = healthLarge.accept(payload)
+            if let reply = result.reply {
+                sendSAP(service: SapHealth.service, payload: reply, label: "health chunk answer")
+            }
+            guard let whole = result.message else { return }
+            note("Health large message complete [\(whole.count)]")
+            message = whole
+        }
+        if SapHealth.isDataBatch(message) {
+            healthBatches += 1
+            guard archive(message) else {
+                note("Health batch \(healthBatches) could not be saved; left on the band")
+                return
+            }
+            if let intervals = SapHealth.stepIntervals(from: message) {
+                store(intervals)
+                note("Health batch \(healthBatches): \(intervals.count) step interval(s), \(intervals.reduce(0) { $0 + $1.steps }) steps")
+            } else {
+                note("Health batch \(healthBatches) saved (type \(message.count > 5 ? Int(message[5]) : -1), not shown yet)")
+            }
+            if let acknowledgement = SapHealth.syncAcknowledgement(for: message) {
+                sendSAP(service: SapHealth.service, payload: acknowledgement, label: "health batch stored")
+            }
+        } else if let answer = SapHealth.reply(to: message) {
+            sendSAP(service: SapHealth.service, payload: answer, label: "health answer")
+        }
+    }
+
+    func selectFace(_ face: SapTransport.BandFace) {
+        sendSAP(service: SapTransport.faceService,
+                payload: SapTransport.selectFace(id: face.id, style: face.style), label: "select face \(face.id)")
+    }
+
+    func setRightWrist(_ right: Bool) {
+        rightWrist = right
+        defaults.set(right, forKey: Keys.wrist)
+        sendSAP(service: SapTransport.settingsService, payload: SapTransport.wrist(right: right),
+                label: right ? "wrist right" : "wrist left")
+    }
+
     func setHealthEnabled(_ enabled: Bool) {
         healthEnabled = enabled
         defaults.set(enabled, forKey: Keys.health)
@@ -420,6 +532,11 @@ final class BandLink: NSObject, ObservableObject {
                 payload: SapTransport.initSettings(localeID: localeID, at: now, offsetSeconds: offset, hour24: hour24),
                 label: "time and language")
         sendSAP(service: SapTransport.setupService, payload: SapTransport.userAgreementRequest, label: "setup complete")
+        // The wrist is only pushed when the wearer has chosen one in the app.
+        if defaults.object(forKey: Keys.wrist) != nil {
+            sendSAP(service: SapTransport.settingsService, payload: SapTransport.wrist(right: rightWrist),
+                    label: rightWrist ? "wrist right" : "wrist left")
+        }
         sendSAP(service: SapTransport.setupService, payload: SapTransport.watchInfoRequest, label: "watch info")
     }
 
@@ -488,6 +605,9 @@ final class BandLink: NSObject, ObservableObject {
     private func endSAPSession() {
         sapReady = false
         bandInitialized = nil
+        faces = []
+        currentFaceID = nil
+        healthLarge = SapHealth.LargeData()
         bandRinging = false
         testRingTimer?.invalidate()
         sapPending = []
@@ -574,7 +694,8 @@ final class BandLink: NSObject, ObservableObject {
     }
 
     private func deliverSAP(service: UInt8, payload: [UInt8]) {
-        note("SAP RX service \(service) [\(payload.count)] \(Self.hex(Data(payload), limit: 2048))")
+        // Health payloads are long and kept in full in the batch archive; the log shows their start.
+        note("SAP RX service \(service) [\(payload.count)] \(Self.hex(Data(payload), limit: service == SapHealth.service ? 48 : 1024))")
         if service == SapTransport.settingsService,
            let level = SapTransport.batteryLevel(fromSettingsReply: payload) {
             if battery != level { note("Battery from the band: \(level)%") }
@@ -584,12 +705,13 @@ final class BandLink: NSObject, ObservableObject {
             if bandInitialized != initialized { note(initialized ? "Band reports it is set up" : "Band reports it is NOT set up yet") }
             bandInitialized = initialized
         }
-        if service == SapHealth.service, healthEnabled {
-            if SapHealth.isDataBatch(payload) {
-                healthBatches += 1
-                note("Health data batch \(healthBatches) received and kept on the band (not acknowledged)")
-            } else if SapHealth.selfCheckPasses, let answer = SapHealth.reply(to: payload) {
-                sendSAP(service: SapHealth.service, payload: answer, label: "health answer")
+        if service == SapHealth.service, healthEnabled { handleHealth(payload) }
+        if service == SapTransport.faceService {
+            if let list = SapTransport.faces(from: payload) {
+                faces = list
+            } else if let current = SapTransport.currentFace(from: payload) {
+                if currentFaceID != current.id { note("Current watch face: \(current.id)") }
+                currentFaceID = current.id
             }
         }
         // The wearer pressed silence (1) or reject (5) on the band: stop its ringing.

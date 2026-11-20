@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Visual demo. No reminders are sent.";
 "profile.subtitle" = "Your rhythm. Your choices.";
 "profile.title" = "Your way.";
-"profile.version" = "FitΛ 0.8.0\nReal Bluetooth · other data is sample";
+"profile.version" = "FitΛ 0.9.0\nReal Bluetooth · other data is sample";
 "profile.welcome" = "Revisit welcome";
 "scenarios.subtitle" = "See how FitΛ handles each situation. These are visual examples; your band and iPhone permissions stay unchanged.";
 "scenarios.title" = "Explore scenarios";
@@ -254,5 +254,14 @@
 "live.setup.note" = "Uses FitΛ's language and the iPhone's clock. It also completes the first-run setup of a new or reset band.";
 "live.setup.new" = "This band has not been set up yet";
 "live.health" = "Health (experimental)";
-"live.health.note" = "Answers the band's health questions by presenting FitΛ as the phone's health app, and logs the data it sends. It does not show steps or sleep yet, and the data stays stored on the band.";
+"live.health.note" = "Receives the band's steps and shows them on Today. FitΛ presents itself as the phone's health app; what it receives is kept on the iPhone and is no longer sent to another phone.";
 "live.health.batches" = "%@ health batches received";
+"band.faces.title" = "WATCH FACES ON THE BAND";
+"band.faces.item" = "Watch face %@";
+"band.faces.current" = "In use";
+"band.faces.note" = "Tap to switch on the band. Installing new watch faces is not possible from the iPhone yet.";
+"live.wrist" = "Wrist you wear the band on";
+"live.wrist.left" = "Left";
+"live.wrist.right" = "Right";
+"today.real.note" = "Steps the band sent to FitΛ today. Sleep and history are still sample data.";
+"today.real.waiting" = "No steps received today. Turn on Health in the band connection to receive them.";

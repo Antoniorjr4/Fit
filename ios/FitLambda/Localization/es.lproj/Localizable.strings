@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Demostración visual. No se envían recordatorios.";
 "profile.subtitle" = "Tu ritmo. Tus decisiones.";
 "profile.title" = "A tu manera.";
-"profile.version" = "FitΛ 0.8.0\nBluetooth real · demás datos de ejemplo";
+"profile.version" = "FitΛ 0.9.0\nBluetooth real · demás datos de ejemplo";
 "profile.welcome" = "Volver a la bienvenida";
 "scenarios.subtitle" = "Mira cómo FitΛ presenta cada situación. Son ejemplos visuales; no cambian tu pulsera ni los permisos del iPhone.";
 "scenarios.title" = "Explorar escenarios";
@@ -254,5 +254,14 @@
 "live.setup.note" = "Usa el idioma de FitΛ y el reloj del iPhone. También completa la configuración inicial de una pulsera nueva o restablecida.";
 "live.setup.new" = "Esta pulsera aún no está configurada";
 "live.health" = "Salud (experimental)";
-"live.health.note" = "Responde a las preguntas de salud de la pulsera presentando FitΛ como la app de salud del teléfono y registra los datos que envíe. Aún no muestra pasos ni sueño, y los datos siguen guardados en la pulsera.";
+"live.health.note" = "Recibe los pasos de la pulsera y los muestra en Hoy. FitΛ se presenta como la app de salud del teléfono; lo que recibe queda en el iPhone y deja de enviarse a otro teléfono.";
 "live.health.batches" = "%@ lotes de salud recibidos";
+"band.faces.title" = "ESFERAS EN LA PULSERA";
+"band.faces.item" = "Esfera %@";
+"band.faces.current" = "En uso";
+"band.faces.note" = "Toca para cambiar en la pulsera. Instalar esferas nuevas aún no es posible desde el iPhone.";
+"live.wrist" = "Muñeca en la que llevas la pulsera";
+"live.wrist.left" = "Izquierda";
+"live.wrist.right" = "Derecha";
+"today.real.note" = "Pasos que la pulsera envió hoy a FitΛ. Sueño e historial siguen siendo datos de ejemplo.";
+"today.real.waiting" = "Sin pasos recibidos hoy. Activa Salud en la conexión de la pulsera para recibirlos.";

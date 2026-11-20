@@ -52,6 +52,33 @@ struct LiveBandCard: View {
     }
 }
 
+/// The faces the band itself reports. Choosing one switches the band at once.
+struct BandFacesCard: View {
+    @EnvironmentObject private var demo: DemoStore
+    @EnvironmentObject private var link: BandLink
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        Card {
+            Kicker(text: demo.t("band.faces.title"))
+            ForEach(link.faces) { face in
+                Button { link.selectFace(face) } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: face.id == link.currentFaceID ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(face.id == link.currentFaceID ? Palette(scheme).accent : Palette(scheme).muted)
+                        Text(demo.t("band.faces.item", demo.number(face.id)))
+                        Spacer(minLength: 8)
+                        if face.id == link.currentFaceID {
+                            Text(demo.t("band.faces.current")).font(.caption).foregroundStyle(Palette(scheme).accent)
+                        }
+                    }.frame(minHeight: 44).contentShape(Rectangle())
+                }.buttonStyle(.plain)
+            }
+            Text(demo.t("band.faces.note")).font(.caption).foregroundStyle(Palette(scheme).muted)
+        }
+    }
+}
+
 struct LiveBandScreen: View {
     @EnvironmentObject private var demo: DemoStore
     @EnvironmentObject private var link: BandLink
@@ -233,6 +260,19 @@ struct LiveBandScreen: View {
                     Label(demo.t("live.setup.new"), systemImage: "exclamationmark.circle")
                         .font(.caption).foregroundStyle(p.pink)
                 }
+                HStack(spacing: 12) {
+                    Image(systemName: "hand.raised.fill")
+                        .font(.title2).foregroundStyle(p.accent)
+                        .scaleEffect(x: link.rightWrist ? -1 : 1, y: 1)
+                        .accessibilityHidden(true)
+                    Picker(demo.t("live.wrist"), selection: Binding(
+                        get: { link.rightWrist },
+                        set: { link.setRightWrist($0) })) {
+                        Text(demo.t("live.wrist.left")).tag(false)
+                        Text(demo.t("live.wrist.right")).tag(true)
+                    }.pickerStyle(.segmented)
+                }
+                Text(demo.t("live.wrist")).font(.caption).foregroundStyle(p.muted)
                 secondary(demo.t("live.setup")) { link.configureBand(languageCode: demo.language.rawValue) }
                     .accessibilityIdentifier("live.setup")
                 Text(demo.t("live.setup.note")).font(.caption).foregroundStyle(p.muted)

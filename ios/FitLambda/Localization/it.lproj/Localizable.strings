@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Demo visiva. Nessun promemoria viene inviato.";
 "profile.subtitle" = "Il tuo ritmo. Le tue scelte.";
 "profile.title" = "A modo tuo.";
-"profile.version" = "FitΛ 0.8.0\nBluetooth reale · altri dati di esempio";
+"profile.version" = "FitΛ 0.9.0\nBluetooth reale · altri dati di esempio";
 "profile.welcome" = "Rivedi il benvenuto";
 "scenarios.subtitle" = "Scopri come FitΛ presenta ogni situazione. Gli esempi non modificano il bracciale né i permessi dell’iPhone.";
 "scenarios.title" = "Esplora scenari";
@@ -254,5 +254,14 @@
 "live.setup.note" = "Usa la lingua di FitΛ e l’orologio dell’iPhone. Completa anche la configurazione iniziale di un bracciale nuovo o ripristinato.";
 "live.setup.new" = "Questo bracciale non è ancora configurato";
 "live.health" = "Salute (sperimentale)";
-"live.health.note" = "Risponde alle richieste di salute del bracciale presentando FitΛ come l’app salute del telefono e registra i dati inviati. Non mostra ancora passi né sonno, e i dati restano sul bracciale.";
+"live.health.note" = "Riceve i passi dal bracciale e li mostra in Oggi. FitΛ si presenta come l’app salute del telefono; ciò che riceve resta sull’iPhone e non viene più inviato a un altro telefono.";
 "live.health.batches" = "%@ blocchi di salute ricevuti";
+"band.faces.title" = "QUADRANTI SUL BRACCIALE";
+"band.faces.item" = "Quadrante %@";
+"band.faces.current" = "In uso";
+"band.faces.note" = "Tocca per cambiare sul bracciale. Installare nuovi quadranti dall’iPhone non è ancora possibile.";
+"live.wrist" = "Polso su cui indossi il bracciale";
+"live.wrist.left" = "Sinistro";
+"live.wrist.right" = "Destro";
+"today.real.note" = "Passi inviati oggi dal bracciale a FitΛ. Sonno e cronologia sono ancora dati di esempio.";
+"today.real.waiting" = "Nessun passo ricevuto oggi. Attiva Salute nella connessione del bracciale per riceverli.";

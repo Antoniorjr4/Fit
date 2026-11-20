@@ -24,6 +24,77 @@ enum SapTransport {
     static let faceAllInfoRequest: [UInt8] = [0x00]
     static let faceInstalledRequest: [UInt8] = [0x01]
     static let faceCurrentRequest: [UInt8] = [0x02]
+
+    struct BandFace: Identifiable, Equatable {
+        let id: Int
+        let style: Int
+        let name: String
+    }
+
+    /// Makes an already installed face the current one.
+    static func selectFace(id: Int, style: Int) -> [UInt8] {
+        [0x03, 0x04, UInt8(id & 0xFF), 0x1D, UInt8(style & 0xFF)]
+    }
+
+    /// Current-face reply (0x42) and select confirmation (0x43): 04 <id> 1D <style>.
+    static func currentFace(from payload: [UInt8]) -> (id: Int, style: Int)? {
+        guard payload.count >= 5, payload[0] == 0x42 || payload[0] == 0x43,
+              payload[1] == 0x04, payload[3] == 0x1D else { return nil }
+        return (Int(payload[2]), Int(payload[4]))
+    }
+
+    /// Installed list (C1 03 <count> ...) or catalogue summary (C0 00 <current> 01 <max> 02 <n> 03 <count> ...).
+    /// Any field this parser does not know makes it give up, so a wrong list is never shown.
+    static func faces(from payload: [UInt8]) -> [BandFace]? {
+        var offset: Int
+        let count: Int
+        if payload.count >= 3, payload[0] == 0xC1, payload[1] == 0x03 {
+            count = Int(payload[2])
+            offset = 3
+        } else if payload.count >= 9, payload[0] == 0xC0, payload[7] == 0x03 {
+            count = Int(payload[8])
+            offset = 9
+        } else {
+            return nil
+        }
+        var out: [BandFace] = []
+        for _ in 0..<count {
+            guard offset + 2 <= payload.count, payload[offset] == 0x18 else { return nil }
+            var fields = Int(payload[offset + 1])
+            offset += 2
+            var id: Int?
+            var style = 0
+            var name = ""
+            while fields > 0 {
+                fields -= 1
+                guard offset + 2 <= payload.count else { return nil }
+                let field = payload[offset]
+                switch field {
+                case 0x04, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x1D, 0x1E:
+                    let value = Int(payload[offset + 1])
+                    if field == 0x04 { id = value }
+                    if field == 0x08 || field == 0x1D { style = value }
+                    offset += 2
+                case 0x05, 0x06, 0x07, 0x11, 0x13:
+                    let length = Int(payload[offset + 1])
+                    guard offset + 2 + length <= payload.count else { return nil }
+                    if field == 0x06 {
+                        let raw = payload[(offset + 2)..<(offset + 2 + length)].filter { $0 != 0 }
+                        name = String(decoding: raw, as: UTF8.self)
+                    }
+                    offset += 2 + length
+                default:
+                    return nil
+                }
+            }
+            guard let faceID = id else { return nil }
+            out.append(BandFace(id: faceID, style: style, name: name))
+        }
+        return out
+    }
+
+    /// Settings message: which wrist the band is worn on.
+    static func wrist(right: Bool) -> [UInt8] { [0x0A, 0x14, right ? 1 : 0] }
     static let callEnable: [UInt8] = [0x08, 0x01]
     static let callRinging: [UInt8] = [0x03, 0x01]
     static let callAnswered: [UInt8] = [0x03, 0x02]
@@ -242,6 +313,16 @@ enum SapTransport {
             guard let part = SapTransport.parse(piece, mtu: 500) else { return false }
             joined += part.payload
         }
-        return joined == long
+        guard joined == long else { return false }
+        // Installed-face list in the layout a real band sent: two faces, the second with extra fields.
+        let list: [UInt8] = [0xC1, 0x03, 0x02,
+                             0x18, 0x08, 0x04, 0x74, 0x05, 0x01, 0x34, 0x06, 0x02, 0x77, 0x00,
+                             0x08, 0x04, 0x09, 0x00, 0x0A, 0x04, 0x0B, 0x01, 0x0C, 0x00,
+                             0x18, 0x0A, 0x04, 0xFE, 0x05, 0x01, 0x31, 0x06, 0x02, 0x66, 0x00,
+                             0x08, 0x00, 0x09, 0x01, 0x0A, 0x00, 0x0B, 0x00, 0x0C, 0x00, 0x0D, 0x01, 0x1E, 0x01]
+        guard let parsed = SapTransport.faces(from: list), parsed.count == 2,
+              parsed[0] == BandFace(id: 0x74, style: 4, name: "w"),
+              parsed[1] == BandFace(id: 0xFE, style: 0, name: "f") else { return false }
+        return SapTransport.selectFace(id: 0x74, style: 4) == [0x03, 0x04, 0x74, 0x1D, 0x04]
     }()
 }
