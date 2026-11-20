@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Visuelle Demo. Es werden keine Erinnerungen gesendet.";
 "profile.subtitle" = "Dein Rhythmus. Deine Entscheidungen.";
 "profile.title" = "Auf deine Art.";
-"profile.version" = "FitΛ 0.9.0\nEchtes Bluetooth · übrige Daten sind Beispiele";
+"profile.version" = "FitΛ 0.10.0\nEchtes Bluetooth · übrige Daten sind Beispiele";
 "profile.welcome" = "Begrüßung erneut ansehen";
 "scenarios.subtitle" = "Sieh dir an, wie FitΛ mit Situationen umgeht. Die Beispiele ändern weder dein Armband noch die iPhone-Berechtigungen.";
 "scenarios.title" = "Szenarien erkunden";
@@ -259,9 +259,10 @@
 "band.faces.title" = "ZIFFERBLÄTTER AUF DEM BAND";
 "band.faces.item" = "Zifferblatt %@";
 "band.faces.current" = "Aktiv";
-"band.faces.note" = "Tippen, um am Band zu wechseln. Neue Zifferblätter lassen sich vom iPhone aus noch nicht installieren.";
+"band.faces.note" = "Tippen, um am Band zu wechseln. Es speichert bis zu 10 Zifferblätter; neue lassen sich vom iPhone aus noch nicht installieren.";
 "live.wrist" = "Handgelenk, an dem du das Band trägst";
 "live.wrist.left" = "Links";
 "live.wrist.right" = "Rechts";
 "today.real.note" = "Schritte, die das Band heute an FitΛ gesendet hat. Schlaf und Verlauf sind weiterhin Beispieldaten.";
 "today.real.waiting" = "Heute keine Schritte empfangen. Aktiviere Gesundheit in der Band-Verbindung, um sie zu erhalten.";
+"live.language" = "Sprache des Bands";

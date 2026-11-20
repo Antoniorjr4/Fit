@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FitDetailSheet: View {
     @EnvironmentObject private var demo: DemoStore
+    @EnvironmentObject private var link: BandLink
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dynamicTypeSize) private var textSize
@@ -91,6 +92,9 @@ struct FitDetailSheet: View {
                 if step < 2 { step += 1 } else { demo.finishConnectionPreview(); dismiss() }
             }.accessibilityIdentifier("pairing.next")
             DemoNote()
+        case .faces where !link.faces.isEmpty:
+            // Faces reported by the real band; tapping one switches the band itself.
+            BandFacesGrid()
         case .faces:
             BandIllustration(face: draftFace).frame(maxWidth: .infinity)
             Picker(demo.t("faces.label"), selection: $draftFace) {

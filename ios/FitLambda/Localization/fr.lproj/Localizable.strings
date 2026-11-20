@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Démo visuelle. Aucun rappel n’est envoyé.";
 "profile.subtitle" = "Votre rythme. Vos choix.";
 "profile.title" = "À votre façon.";
-"profile.version" = "FitΛ 0.9.0\nBluetooth réel · autres données d’exemple";
+"profile.version" = "FitΛ 0.10.0\nBluetooth réel · autres données d’exemple";
 "profile.welcome" = "Revoir l’accueil";
 "scenarios.subtitle" = "Découvrez chaque situation dans FitΛ. Ces exemples visuels ne modifient ni le bracelet ni les autorisations de l’iPhone.";
 "scenarios.title" = "Explorer les scénarios";
@@ -259,9 +259,10 @@
 "band.faces.title" = "CADRANS SUR LE BRACELET";
 "band.faces.item" = "Cadran %@";
 "band.faces.current" = "Utilisé";
-"band.faces.note" = "Touchez pour changer sur le bracelet. Installer de nouveaux cadrans n’est pas encore possible depuis l’iPhone.";
+"band.faces.note" = "Touchez pour changer sur le bracelet. Il conserve jusqu’à 10 cadrans ; en installer de nouveaux n’est pas encore possible depuis l’iPhone.";
 "live.wrist" = "Poignet où vous portez le bracelet";
 "live.wrist.left" = "Gauche";
 "live.wrist.right" = "Droit";
 "today.real.note" = "Pas envoyés aujourd’hui par le bracelet à FitΛ. Sommeil et historique restent des données d’exemple.";
 "today.real.waiting" = "Aucun pas reçu aujourd’hui. Activez Santé dans la connexion du bracelet pour les recevoir.";
+"live.language" = "Langue du bracelet";

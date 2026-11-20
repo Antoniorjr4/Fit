@@ -225,7 +225,7 @@ struct TodayScreen: View {
             } else {
                 EmptyMetricsCard(kind: "today") { sheet = .pairing }
             }
-            DemoNote()
+            if !realDay { DemoNote() }
         }
     }
     private var statsLayout: AnyLayout {
@@ -415,8 +415,24 @@ struct TrendsScreen: View {
 struct BandIllustration: View {
     @EnvironmentObject private var demo: DemoStore
     let face: Int
+    /// With a real band linked the drawing shows the actual date, time and steps.
+    var now: Date?
+    var steps: Int?
     private var tone: Color { face == 1 ? Color(hex: 0xEFF1DF) : face == 2 ? Color(hex: 0x251B2E) : Color(hex: 0x0A100A) }
     private var ink: Color { face == 1 ? Color(hex: 0x2A3122) : face == 2 ? Color(hex: 0xD3BAFF) : Color(hex: 0xD4F68A) }
+    private var dateLine: String {
+        guard let now else { return demo.date("EEE d MMM") }
+        return now.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(demo.language.locale))
+    }
+    private var timeLine: String {
+        guard let now else { return "09\n41" }
+        let parts = Calendar.current.dateComponents([.hour, .minute], from: now)
+        return String(format: "%02d\n%02d", parts.hour ?? 0, parts.minute ?? 0)
+    }
+    private var stepsLine: String {
+        if let steps { return demo.t("steps.count", demo.number(steps)).uppercased(with: demo.language.locale) }
+        return demo.hasMetrics ? demo.t("steps.count", demo.number(demo.steps)).uppercased(with: demo.language.locale) : "—"
+    }
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24).fill(LinearGradient(colors: [Color(hex: 0x1A211C), Color(hex: 0x39433A), Color(hex: 0x171E19)], startPoint: .leading, endPoint: .trailing)).frame(width: 79, height: 268)
@@ -424,9 +440,9 @@ struct BandIllustration: View {
             RoundedRectangle(cornerRadius: 22).fill(tone).frame(width: 99, height: 143)
                 .overlay(RoundedRectangle(cornerRadius: 22).stroke(.black, lineWidth: 6))
             VStack(spacing: 3) {
-                Text(demo.date("EEE d MMM").uppercased(with: demo.language.locale)).font(.system(size: 7, weight: .medium)).tracking(1)
-                Text("09\n41").font(.system(size: 44, weight: face == 1 ? .light : .bold, design: .rounded)).lineSpacing(-11)
-                Text(demo.hasMetrics ? demo.t("steps.count", demo.number(demo.steps)).uppercased(with: demo.language.locale) : "—").font(.system(size: 6)).tracking(1)
+                Text(dateLine.uppercased(with: demo.language.locale)).font(.system(size: 7, weight: .medium)).tracking(1)
+                Text(timeLine).font(.system(size: 44, weight: face == 1 ? .light : .bold, design: .rounded)).lineSpacing(-11)
+                Text(stepsLine).font(.system(size: 6)).tracking(1)
             }.foregroundStyle(ink)
         }.frame(height: 280).rotationEffect(.degrees(-12))
             .shadow(color: .black.opacity(0.15), radius: 10, x: 12, y: 14)
@@ -449,11 +465,18 @@ struct BandScreen: View {
                 .accessibilityIdentifier("band.title")
             Text(demo.t("band.subtitle")).font(.subheadline).foregroundStyle(Palette(scheme).muted)
             LiveBandCard(sheet: $sheet)
-            if !link.faces.isEmpty { BandFacesCard() }
-            BandConnectionPanel(sheet: $sheet)
-            BandIllustration(face: demo.face).frame(maxWidth: .infinity)
+            if link.hasRememberedBand {
+                // A real band is linked: the simulated connection panel and sample clock give way to real values.
+                TimelineView(.everyMinute) { context in
+                    BandIllustration(face: demo.face, now: context.date, steps: link.stepTotals(on: context.date)?.steps ?? 0)
+                        .frame(maxWidth: .infinity)
+                }
+            } else {
+                BandConnectionPanel(sheet: $sheet)
+                BandIllustration(face: demo.face).frame(maxWidth: .infinity)
+            }
             VStack(spacing: 8) {
-                Text("Galaxy Fit3").font(.title2.weight(.semibold))
+                Text(link.hasRememberedBand ? (link.deviceName ?? "Galaxy Fit3") : "Galaxy Fit3").font(.title2.weight(.semibold))
                 if let battery = link.battery {
                     Label(demo.t("live.battery", demo.percent(Double(battery) / 100)), systemImage: "battery.75percent").font(.caption)
                 } else if link.hasRememberedBand {
@@ -466,11 +489,13 @@ struct BandScreen: View {
             Card {
                 Button { sheet = .faces } label: { RowLabel(title: demo.t("band.style"), symbol: "paintpalette") }
                     .accessibilityIdentifier("faces.open")
-                Divider()
-                Button { sheet = .sync } label: { RowLabel(title: demo.t("band.sync"), symbol: "arrow.triangle.2.circlepath") }
-                    .accessibilityIdentifier("sync.open")
+                if !link.hasRememberedBand {
+                    Divider()
+                    Button { sheet = .sync } label: { RowLabel(title: demo.t("band.sync"), symbol: "arrow.triangle.2.circlepath") }
+                        .accessibilityIdentifier("sync.open")
+                }
             }.buttonStyle(.plain)
-            DemoNote()
+            if !link.hasRememberedBand { DemoNote() }
         }
     }
 }

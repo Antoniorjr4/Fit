@@ -211,8 +211,11 @@ enum SapTransport {
     static let deviceStatusRequest: [UInt8] = [0x02, 0x01, 0x00]
     static let userAgreementRequest: [UInt8] = [0x84, 0x01, 0x01]
 
-    /// Language ids the band firmware understands, keyed by the app's language codes.
-    static let localeIDs: [String: Int] = ["pt-BR": 82, "en": 13, "es": 14, "fr": 20, "de": 11, "it": 30]
+    /// Language ids the band firmware understands (table from Fit3Languages.kt in yuriyurin/Fit3-App).
+    static let localeIDs: [String: Int] = ["ar": 0, "az-AZ": 2, "be-BY": 92, "bg": 4, "bn-BD": 79, "bn-IN": 93, "bs": 7, "ca": 8, "cs": 9, "da": 10, "de": 11, "el": 12, "en": 13, "en-CA": 77, "en-PH": 78, "en-US": 100, "es-ES": 14, "es-US": 83, "et-EE": 101, "eu-ES": 91, "fa": 17, "fi": 18, "fr": 20, "fr-CA": 84, "ga": 21, "gl-ES": 104, "hi": 24, "hr": 25, "hu": 26, "hy-AM": 90, "id": 28, "is-IS": 29, "it": 30, "he": 31, "ja": 32, "ka-GE": 105, "kk-KZ": 34, "ko": 37, "ky-KG": 38, "lt": 40, "lv": 41, "mk-MK": 43, "mn-MN": 45, "mr-IN": 46, "ms-MY": 47, "nb": 49, "nl": 51, "pl": 54, "pt-BR": 82, "pt-PT": 55, "ro": 56, "ru": 57, "sk": 59, "sl": 60, "sq-AL": 61, "sr": 62, "sv": 63, "tg": 87, "th": 68, "tk": 88, "fil": 19, "tr": 69, "uk": 71, "ur-PK": 72, "uz-UZ": 89, "vi": 73, "zh-CN": 96, "zh-HK": 80, "zh-TW": 81]
+
+    /// The app's own language codes that differ from the band's table.
+    static func bandLanguage(forAppLanguage code: String) -> String { code == "es" ? "es-ES" : code }
 
     /// Sets language, clock, time zone and 12/24-hour display in one message.
     static func initSettings(localeID: Int, at date: Date, offsetSeconds: Int, hour24: Bool) -> [UInt8] {

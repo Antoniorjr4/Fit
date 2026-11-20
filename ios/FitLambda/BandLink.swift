@@ -80,6 +80,8 @@ final class BandLink: NSObject, ObservableObject {
     @Published private(set) var faces: [SapTransport.BandFace] = []
     @Published private(set) var currentFaceID: Int?
     @Published private(set) var rightWrist = false
+    /// Language chosen for the band; nil means "same as the app".
+    @Published private(set) var bandLanguage: String?
     /// Whether the band reports having been through first-run setup; nil until it answers.
     @Published private(set) var bandInitialized: Bool?
     /// iOS holds a stale bond for this band; only the user can clear it in Settings.
@@ -97,6 +99,7 @@ final class BandLink: NSObject, ObservableObject {
         static let health = "fitlambda.band.health"
         static let steps = "fitlambda.band.steps"
         static let wrist = "fitlambda.band.right-wrist"
+        static let language = "fitlambda.band.language"
     }
 
     private static let heartService = CBUUID(string: "180D")
@@ -155,6 +158,7 @@ final class BandLink: NSObject, ObservableObject {
         callAlerts = defaults.bool(forKey: Keys.callAlerts)
         healthEnabled = defaults.bool(forKey: Keys.health)
         rightWrist = defaults.bool(forKey: Keys.wrist)
+        bandLanguage = defaults.string(forKey: Keys.language)
         if let stored = defaults.data(forKey: Keys.steps),
            let decoded = try? JSONDecoder().decode([Int: SapHealth.StepInterval].self, from: stored) {
             stepRecords = decoded
@@ -500,6 +504,11 @@ final class BandLink: NSObject, ObservableObject {
                 payload: SapTransport.selectFace(id: face.id, style: face.style), label: "select face \(face.id)")
     }
 
+    func setBandLanguage(_ code: String) {
+        bandLanguage = code
+        defaults.set(code, forKey: Keys.language)
+    }
+
     func setRightWrist(_ right: Bool) {
         rightWrist = right
         defaults.set(right, forKey: Keys.wrist)
@@ -519,8 +528,9 @@ final class BandLink: NSObject, ObservableObject {
             note("Cannot configure the band: the Samsung session is not active")
             return
         }
-        guard let localeID = SapTransport.localeIDs[languageCode] else {
-            note("No band language id for \(languageCode); nothing was sent")
+        let chosen = bandLanguage ?? SapTransport.bandLanguage(forAppLanguage: languageCode)
+        guard let localeID = SapTransport.localeIDs[chosen] else {
+            note("No band language id for \(chosen); nothing was sent")
             return
         }
         let now = Date()
@@ -826,6 +836,20 @@ extension BandLink: CBCentralManagerDelegate {
         if let failure = error as? CBError, failure.code == .peerRemovedPairingInformation {
             needsForgetInSettings = true
             note("iOS keeps an old pairing for this band: forget it in Settings > Bluetooth, restart the iPhone and search again")
+            phase = .failed
+            return
+        }
+        // A band this phone already knows went out of range in the middle of reconnecting
+        // (for example while the link was being encrypted). Keep waiting for it instead of giving up.
+        if !userDisconnected, rememberedID == peripheral.identifier, central.state == .poweredOn {
+            phase = .reconnecting
+            note("Will keep trying to reconnect")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+                guard let self, !self.userDisconnected, self.phase == .reconnecting,
+                      let central = self.central, central.state == .poweredOn else { return }
+                central.connect(peripheral, options: nil)
+            }
+            return
         }
         phase = .failed
     }

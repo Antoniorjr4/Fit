@@ -52,30 +52,44 @@ struct LiveBandCard: View {
     }
 }
 
-/// The faces the band itself reports. Choosing one switches the band at once.
-struct BandFacesCard: View {
+/// The faces the band itself reports, as tiles. Choosing one switches the band at once.
+/// Tiles carry the face number only: the artwork belongs to the band maker and is not bundled.
+struct BandFacesGrid: View {
     @EnvironmentObject private var demo: DemoStore
     @EnvironmentObject private var link: BandLink
     @Environment(\.colorScheme) private var scheme
+    private let columns = [GridItem(.adaptive(minimum: 84), spacing: 12)]
 
     var body: some View {
-        Card {
-            Kicker(text: demo.t("band.faces.title"))
+        let p = Palette(scheme)
+        LazyVGrid(columns: columns, spacing: 14) {
             ForEach(link.faces) { face in
+                let current = face.id == link.currentFaceID
                 Button { link.selectFace(face) } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: face.id == link.currentFaceID ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(face.id == link.currentFaceID ? Palette(scheme).accent : Palette(scheme).muted)
-                        Text(demo.t("band.faces.item", demo.number(face.id)))
-                        Spacer(minLength: 8)
-                        if face.id == link.currentFaceID {
-                            Text(demo.t("band.faces.current")).font(.caption).foregroundStyle(Palette(scheme).accent)
-                        }
-                    }.frame(minHeight: 44).contentShape(Rectangle())
+                    VStack(spacing: 6) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 14).fill(Color.black)
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(current ? p.accent : p.muted.opacity(0.4), lineWidth: current ? 3 : 1)
+                            VStack(spacing: 2) {
+                                Text(demo.number(face.id))
+                                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(current ? p.accent : Color.white)
+                                if current {
+                                    Image(systemName: "checkmark.circle.fill").font(.caption).foregroundStyle(p.accent)
+                                }
+                            }
+                        }.frame(width: 64, height: 92)
+                        Text(current ? demo.t("band.faces.current") : demo.t("band.faces.item", demo.number(face.id)))
+                            .font(.caption2).foregroundStyle(current ? p.accent : p.muted)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                    }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
                 }.buttonStyle(.plain)
+                    .accessibilityLabel(demo.t("band.faces.item", demo.number(face.id)))
+                    .accessibilityAddTraits(current ? .isSelected : [])
             }
-            Text(demo.t("band.faces.note")).font(.caption).foregroundStyle(Palette(scheme).muted)
         }
+        Text(demo.t("band.faces.note")).font(.caption).foregroundStyle(p.muted)
     }
 }
 
@@ -273,6 +287,14 @@ struct LiveBandScreen: View {
                     }.pickerStyle(.segmented)
                 }
                 Text(demo.t("live.wrist")).font(.caption).foregroundStyle(p.muted)
+                Picker(demo.t("live.language"), selection: Binding(
+                    get: { link.bandLanguage ?? SapTransport.bandLanguage(forAppLanguage: demo.language.rawValue) },
+                    set: { link.setBandLanguage($0) })) {
+                    ForEach(bandLanguages) { item in
+                        Text(item.name).tag(item.code)
+                    }
+                }.pickerStyle(.menu).font(.subheadline).tint(p.accent)
+                    .accessibilityIdentifier("live.language")
                 secondary(demo.t("live.setup")) { link.configureBand(languageCode: demo.language.rawValue) }
                     .accessibilityIdentifier("live.setup")
                 Text(demo.t("live.setup.note")).font(.caption).foregroundStyle(p.muted)
@@ -316,6 +338,14 @@ struct LiveBandScreen: View {
         }
     }
 
+    /// Languages the band firmware offers, named in the app's language and sorted by name.
+    private var bandLanguages: [BandLanguageOption] {
+        let locale = demo.language.locale
+        return SapTransport.localeIDs.keys
+            .map { BandLanguageOption(code: $0, name: (locale.localizedString(forIdentifier: $0) ?? $0).capitalized(with: locale)) }
+            .sorted { $0.name < $1.name }
+    }
+
     private var forgetButton: some View {
         Button(role: .destructive) { link.forget() } label: {
             Text(demo.t("live.forget")).font(.subheadline).frame(maxWidth: .infinity, minHeight: 44)
@@ -335,4 +365,10 @@ struct LiveBandScreen: View {
             Text(value).multilineTextAlignment(.trailing)
         }.font(.subheadline).accessibilityElement(children: .combine)
     }
+}
+
+struct BandLanguageOption: Identifiable {
+    let code: String
+    let name: String
+    var id: String { code }
 }

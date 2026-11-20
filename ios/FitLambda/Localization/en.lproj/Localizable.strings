@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Visual demo. No reminders are sent.";
 "profile.subtitle" = "Your rhythm. Your choices.";
 "profile.title" = "Your way.";
-"profile.version" = "FitΛ 0.9.0\nReal Bluetooth · other data is sample";
+"profile.version" = "FitΛ 0.10.0\nReal Bluetooth · other data is sample";
 "profile.welcome" = "Revisit welcome";
 "scenarios.subtitle" = "See how FitΛ handles each situation. These are visual examples; your band and iPhone permissions stay unchanged.";
 "scenarios.title" = "Explore scenarios";
@@ -259,9 +259,10 @@
 "band.faces.title" = "WATCH FACES ON THE BAND";
 "band.faces.item" = "Watch face %@";
 "band.faces.current" = "In use";
-"band.faces.note" = "Tap to switch on the band. Installing new watch faces is not possible from the iPhone yet.";
+"band.faces.note" = "Tap to switch on the band. It holds up to 10 watch faces; installing new ones is not possible from the iPhone yet.";
 "live.wrist" = "Wrist you wear the band on";
 "live.wrist.left" = "Left";
 "live.wrist.right" = "Right";
 "today.real.note" = "Steps the band sent to FitΛ today. Sleep and history are still sample data.";
 "today.real.waiting" = "No steps received today. Turn on Health in the band connection to receive them.";
+"live.language" = "Band language";
