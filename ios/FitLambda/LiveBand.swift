@@ -94,7 +94,9 @@ struct LiveBandScreen: View {
         switch link.phase {
         case .idle, .failed:
             if link.phase == .failed {
-                Text(demo.t("live.failed.help")).font(.subheadline).foregroundStyle(p.muted)
+                Text(demo.t(link.needsForgetInSettings ? "live.pairing.help" : "live.failed.help"))
+                    .font(.subheadline).foregroundStyle(p.muted)
+                    .accessibilityIdentifier("live.failed.help")
             }
             if !link.found.isEmpty {
                 foundList
@@ -205,6 +207,15 @@ struct LiveBandScreen: View {
                 set: { link.setListenProprietary($0) }))
                 .font(.subheadline)
             Text(demo.t("live.listen.note")).font(.caption).foregroundStyle(p.muted)
+            Divider()
+            Toggle(demo.t("live.listen.sap"), isOn: Binding(
+                get: { link.listenSAP },
+                set: { link.setListenSAP($0) }))
+                .font(.subheadline)
+            Text(demo.t("live.listen.sap.note")).font(.caption).foregroundStyle(p.muted)
+            if link.listenAutoDisabled {
+                Text(demo.t("live.listen.autoOff")).font(.caption).foregroundStyle(p.pink)
+            }
             if link.proprietaryFrames > 0 {
                 Text(demo.t("live.frames", demo.number(link.proprietaryFrames)))
                     .font(.caption).foregroundStyle(p.accent)

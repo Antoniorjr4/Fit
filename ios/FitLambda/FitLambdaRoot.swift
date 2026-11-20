@@ -423,6 +423,9 @@ struct BandScreen: View {
                 Text("Galaxy Fit3").font(.title2.weight(.semibold))
                 if let battery = link.battery {
                     Label(demo.t("live.battery", demo.percent(Double(battery) / 100)), systemImage: "battery.75percent").font(.caption)
+                } else if link.hasRememberedBand {
+                    // A real band is linked and it has not reported a level: show no sample number.
+                    Label(demo.t("live.battery.none"), systemImage: "battery.0percent").font(.caption)
                 } else {
                     Label(demo.hasMetrics ? demo.t("band.battery", demo.percent(0.78)) : demo.t("band.noBattery"), systemImage: "battery.75percent").font(.caption)
                 }

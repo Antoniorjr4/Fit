@@ -62,6 +62,12 @@ final class BandLink: NSObject, ObservableObject {
     @Published private(set) var lastSeen: Date?
     @Published private(set) var hasRememberedBand = false
     @Published private(set) var listenProprietary = false
+    /// The Samsung accessory channel (service 1A1A) is opt-in on its own: the band
+    /// greets a listener there and drops the link when nobody answers.
+    @Published private(set) var listenSAP = false
+    @Published private(set) var listenAutoDisabled = false
+    /// iOS holds a stale bond for this band; only the user can clear it in Settings.
+    @Published private(set) var needsForgetInSettings = false
 
     private enum Keys {
         static let device = "fitlambda.band.identifier"
@@ -69,6 +75,7 @@ final class BandLink: NSObject, ObservableObject {
         static let heartBPM = "fitlambda.band.heart.bpm"
         static let heartAt = "fitlambda.band.heart.at"
         static let listen = "fitlambda.band.listen-proprietary"
+        static let listenSAP = "fitlambda.band.listen-sap"
     }
 
     private static let heartService = CBUUID(string: "180D")
@@ -100,6 +107,8 @@ final class BandLink: NSObject, ObservableObject {
     private var userDisconnected = false
     private var pendingServices = 0
     private var logCounter = 0
+    private var proprietarySubscribedAt: Date?
+    private var quickDrops = 0
     private var scanTimer: Timer?
     private var connectTimer: Timer?
     private var rssiTimer: Timer?
@@ -107,6 +116,7 @@ final class BandLink: NSObject, ObservableObject {
     override init() {
         super.init()
         listenProprietary = defaults.bool(forKey: Keys.listen)
+        listenSAP = defaults.bool(forKey: Keys.listenSAP)
         let bpm = defaults.integer(forKey: Keys.heartBPM)
         let at = defaults.double(forKey: Keys.heartAt)
         if bpm > 0, at > 0 { heart = HeartReading(bpm: bpm, at: Date(timeIntervalSince1970: at)) }
@@ -125,6 +135,7 @@ final class BandLink: NSObject, ObservableObject {
         wantsScan = true
         scanEnded = false
         userDisconnected = false
+        needsForgetInSettings = false
         ensureCentral()
         guard let central else { return }
         switch central.state {
@@ -191,19 +202,44 @@ final class BandLink: NSObject, ObservableObject {
         services = []
         proprietaryFrames = 0
         lastSeen = nil
+        needsForgetInSettings = false
         note("Band forgotten on this iPhone")
     }
 
     func setListenProprietary(_ enabled: Bool) {
         listenProprietary = enabled
         defaults.set(enabled, forKey: Keys.listen)
+        listenAutoDisabled = false
+        quickDrops = 0
+        applyListening(sap: false, enabled: enabled)
+        note(enabled ? "Listening to proprietary channels (read-only)" : "Stopped listening to proprietary channels")
+    }
+
+    func setListenSAP(_ enabled: Bool) {
+        listenSAP = enabled
+        defaults.set(enabled, forKey: Keys.listenSAP)
+        listenAutoDisabled = false
+        quickDrops = 0
+        applyListening(sap: true, enabled: enabled)
+        note(enabled ? "Listening to the Samsung accessory channel (read-only)" : "Stopped listening to the Samsung accessory channel")
+    }
+
+    private func wantsListening(to service: CBUUID) -> Bool {
+        service == Self.samsungLinkService ? listenSAP : listenProprietary
+    }
+
+    private func applyListening(sap: Bool, enabled: Bool) {
         guard let peripheral, peripheral.state == .connected else { return }
         for service in peripheral.services ?? [] where !Self.standardServices.contains(service.uuid) {
-            for characteristic in service.characteristics ?? [] where Self.canNotify(characteristic) {
-                peripheral.setNotifyValue(enabled, for: characteristic)
+            guard (service.uuid == Self.samsungLinkService) == sap else { continue }
+            for characteristic in service.characteristics ?? [] {
+                if Self.canNotify(characteristic) {
+                    peripheral.setNotifyValue(enabled, for: characteristic)
+                } else if enabled, characteristic.properties.contains(.read) {
+                    peripheral.readValue(for: characteristic)
+                }
             }
         }
-        note(enabled ? "Listening to proprietary channels (read-only)" : "Stopped listening to proprietary channels")
     }
 
     /// Plain-text report for sharing. Contains no keys, accounts or location.
@@ -343,7 +379,7 @@ final class BandLink: NSObject, ObservableObject {
         return names.joined(separator: ", ")
     }
 
-    private static func hex(_ data: Data, limit: Int = 64) -> String {
+    private static func hex(_ data: Data, limit: Int = 512) -> String {
         let shown = data.prefix(limit).map { String(format: "%02X", $0) }.joined(separator: " ")
         return data.count > limit ? shown + " ..." : shown
     }
@@ -421,6 +457,10 @@ extension BandLink: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         connectTimer?.invalidate()
         note("Connection failed: \(error?.localizedDescription ?? "no reason given")")
+        if let failure = error as? CBError, failure.code == .peerRemovedPairingInformation {
+            needsForgetInSettings = true
+            note("iOS keeps an old pairing for this band: forget it in Settings > Bluetooth, restart the iPhone and search again")
+        }
         phase = .failed
     }
 
@@ -433,6 +473,23 @@ extension BandLink: CBCentralManagerDelegate {
             return
         }
         note("Link lost: \(error?.localizedDescription ?? "band out of range")")
+        // The band hangs up about ten seconds after a proprietary subscription it gets
+        // no answer to. Two such drops in a row end the experiment instead of looping.
+        if let since = proprietarySubscribedAt, Date().timeIntervalSince(since) < 20 {
+            quickDrops += 1
+        } else {
+            quickDrops = 0
+        }
+        proprietarySubscribedAt = nil
+        if quickDrops >= 2, listenProprietary || listenSAP {
+            listenProprietary = false
+            listenSAP = false
+            defaults.set(false, forKey: Keys.listen)
+            defaults.set(false, forKey: Keys.listenSAP)
+            listenAutoDisabled = true
+            quickDrops = 0
+            note("The band dropped the link twice right after a proprietary subscription; listening was turned off")
+        }
         guard central.state == .poweredOn else { return }
         phase = .reconnecting
         central.connect(peripheral, options: nil)
@@ -470,8 +527,12 @@ extension BandLink: CBPeripheralDelegate {
                 if Self.canNotify(characteristic) { peripheral.setNotifyValue(true, for: characteristic) }
             } else if Self.infoFields[characteristic.uuid] != nil, characteristic.properties.contains(.read) {
                 peripheral.readValue(for: characteristic)
-            } else if proprietary, listenProprietary, Self.canNotify(characteristic) {
-                peripheral.setNotifyValue(true, for: characteristic)
+            } else if proprietary, wantsListening(to: service.uuid) {
+                if Self.canNotify(characteristic) {
+                    peripheral.setNotifyValue(true, for: characteristic)
+                } else if characteristic.properties.contains(.read) {
+                    peripheral.readValue(for: characteristic)
+                }
             }
         }
         pendingServices -= 1
@@ -533,6 +594,10 @@ extension BandLink: CBPeripheralDelegate {
             note("Subscribe failed on \(characteristic.uuid.uuidString): \(error.localizedDescription)")
         } else {
             note("\(characteristic.isNotifying ? "Subscribed to" : "Unsubscribed from") \(characteristic.uuid.uuidString)")
+            if characteristic.isNotifying, let owner = characteristic.service,
+               !Self.standardServices.contains(owner.uuid) {
+                proprietarySubscribedAt = Date()
+            }
         }
     }
 

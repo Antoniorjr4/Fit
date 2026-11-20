@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Demostración visual. No se envían recordatorios.";
 "profile.subtitle" = "Tu ritmo. Tus decisiones.";
 "profile.title" = "A tu manera.";
-"profile.version" = "FitΛ 0.5.0\nBluetooth real · demás datos de ejemplo";
+"profile.version" = "FitΛ 0.5.1\nBluetooth real · demás datos de ejemplo";
 "profile.welcome" = "Volver a la bienvenida";
 "scenarios.subtitle" = "Mira cómo FitΛ presenta cada situación. Son ejemplos visuales; no cambian tu pulsera ni los permisos del iPhone.";
 "scenarios.title" = "Explorar escenarios";
@@ -238,3 +238,8 @@
 "live.log.share" = "Compartir registro";
 "live.log.empty" = "Aún no hay eventos.";
 "live.lastSeen" = "Último contacto: %@";
+"live.pairing.help" = "El iPhone conserva un enlace antiguo de esta pulsera. Abre Ajustes > Bluetooth, toca la (i) de Galaxy Fit3 y Omitir dispositivo, reinicia el iPhone y busca de nuevo.";
+"live.listen.sap" = "Escuchar el canal de accesorio Samsung";
+"live.listen.sap.note" = "Experimental. La pulsera envía un saludo y cierra la conexión en unos 10 segundos si nadie responde.";
+"live.listen.autoOff" = "La pulsera cortó la conexión dos veces justo después de la escucha. La escucha se desactivó para mantener el pulso.";
+"live.battery.none" = "La pulsera no informa la batería";
