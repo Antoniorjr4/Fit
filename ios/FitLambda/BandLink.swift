@@ -82,6 +82,9 @@ final class BandLink: NSObject, ObservableObject {
     @Published private(set) var heartHistory: [Int: SapHealth.HeartSample] = [:]
     @Published private(set) var sleepEpisodes: [String: SapHealth.SleepEpisode] = [:]
     @Published private(set) var sleepStages: Set<SapHealth.SleepStage> = []
+    /// Latest readings by time: blood oxygen (percent) and stress (0-100).
+    @Published private(set) var oxygen: [Int: Int] = [:]
+    @Published private(set) var stress: [Int: Int] = [:]
     /// Notifications waiting for the band to be reachable.
     @Published private(set) var pendingNotifications = 0
     private var notificationQueue: [(title: String, text: String, kind: SapNotify.Kind, app: String, at: Date)] = []
@@ -120,6 +123,8 @@ final class BandLink: NSObject, ObservableObject {
         static let sleepStages = "fitlambda.band.sleep-stages"
         static let noticeSequence = "fitlambda.band.notice-sequence"
         static let music = "fitlambda.band.music"
+        static let oxygen = "fitlambda.band.oxygen"
+        static let stress = "fitlambda.band.stress"
     }
 
     private static let heartService = CBUUID(string: "180D")
@@ -188,6 +193,8 @@ final class BandLink: NSObject, ObservableObject {
            let decoded = try? JSONDecoder().decode([Int: SapHealth.HeartSample].self, from: stored) {
             heartHistory = decoded
         }
+        if let stored = defaults.data(forKey: Keys.oxygen), let decoded = try? JSONDecoder().decode([Int: Int].self, from: stored) { oxygen = decoded }
+        if let stored = defaults.data(forKey: Keys.stress), let decoded = try? JSONDecoder().decode([Int: Int].self, from: stored) { stress = decoded }
         if let stored = defaults.data(forKey: Keys.sleepEpisodes),
            let decoded = try? JSONDecoder().decode([String: SapHealth.SleepEpisode].self, from: stored) {
             sleepEpisodes = decoded
@@ -286,7 +293,9 @@ final class BandLink: NSObject, ObservableObject {
         defaults.removeObject(forKey: Keys.sapMTU)
         defaults.removeObject(forKey: Keys.steps)
         stepRecords = [:]
-        for key in [Keys.heartHistory, Keys.sleepEpisodes, Keys.sleepStages] { defaults.removeObject(forKey: key) }
+        for key in [Keys.heartHistory, Keys.sleepEpisodes, Keys.sleepStages, Keys.oxygen, Keys.stress] { defaults.removeObject(forKey: key) }
+        oxygen = [:]
+        stress = [:]
         heartHistory = [:]
         sleepEpisodes = [:]
         sleepStages = []
@@ -501,6 +510,21 @@ final class BandLink: NSObject, ObservableObject {
                             score: episodes.compactMap(\.score).max())
     }
 
+    /// Lowest and highest heart rate the band recorded on the given local day.
+    func heartRange(on day: Date = Date()) -> (low: Int, high: Int)? {
+        let begin = Int(Calendar.current.startOfDay(for: day).timeIntervalSince1970)
+        let today = heartHistory.values.filter { $0.at >= begin && $0.at < begin + 86_400 }
+        guard let low = today.map({ $0.min ?? $0.bpm }).min(), let high = today.map({ $0.max ?? $0.bpm }).max() else { return nil }
+        return (low, high)
+    }
+
+    private func store(readings: [Int: Int], oxygen isOxygen: Bool) {
+        let cutoff = Int(Date().timeIntervalSince1970) - 7 * 86_400
+        let merged = (isOxygen ? oxygen : stress).merging(readings) { $1 }.filter { $0.key >= cutoff }
+        if isOxygen { oxygen = merged } else { stress = merged }
+        if let data = try? JSONEncoder().encode(merged) { defaults.set(data, forKey: isOxygen ? Keys.oxygen : Keys.stress) }
+    }
+
     private func store(heart samples: [SapHealth.HeartSample]) {
         var merged = heartHistory
         for sample in samples { merged[sample.at] = sample }
@@ -681,6 +705,12 @@ final class BandLink: NSObject, ObservableObject {
             } else if let samples = SapHealth.heartSamples(from: message) {
                 store(heart: samples)
                 note("Health batch \(healthBatches): \(samples.count) heart-rate sample(s)")
+            } else if let values = SapHealth.readings(from: message, type: SapHealth.typeOxygen) {
+                store(readings: values, oxygen: true)
+                note("Health batch \(healthBatches): \(values.count) blood-oxygen reading(s)")
+            } else if let values = SapHealth.readings(from: message, type: SapHealth.typeStress) {
+                store(readings: values, oxygen: false)
+                note("Health batch \(healthBatches): \(values.count) stress reading(s)")
             } else if let episodes = SapHealth.sleepEpisodes(from: message) {
                 store(sleep: episodes, stages: [])
                 note("Health batch \(healthBatches): \(episodes.count) sleep period(s)")
@@ -766,6 +796,15 @@ final class BandLink: NSObject, ObservableObject {
         startBandRinging(title: "FitLambda")
         testRingTimer?.invalidate()
         testRingTimer = Timer.scheduledTimer(withTimeInterval: 6, repeats: false) { [weak self] _ in
+            self?.stopBandRinging()
+        }
+    }
+
+    /// Makes the band vibrate for 20 seconds (or until it is touched) so it can be found.
+    func findBand(title: String) {
+        startBandRinging(title: title)
+        testRingTimer?.invalidate()
+        testRingTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: false) { [weak self] _ in
             self?.stopBandRinging()
         }
     }

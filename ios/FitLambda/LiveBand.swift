@@ -241,6 +241,42 @@ struct RealSleepCard: View {
     }
 }
 
+/// Heart range, blood oxygen and stress the band sent, on the Today screen.
+struct RealVitalsCard: View {
+    @EnvironmentObject private var demo: DemoStore
+    @EnvironmentObject private var link: BandLink
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        let p = Palette(scheme)
+        let range = link.heartRange()
+        let oxygen = link.oxygen.max { $0.key < $1.key }
+        let stress = link.stress.max { $0.key < $1.key }
+        if range != nil || oxygen != nil || stress != nil {
+            Card {
+                if let range {
+                    row(demo.t("vitals.heartRange"), "\(demo.number(range.low))–\(demo.number(range.high)) \(demo.t("unit.bpm"))", "heart.fill", p.pink, p)
+                }
+                if let oxygen {
+                    row(demo.t("vitals.oxygen"), demo.number(oxygen.value) + " %", "lungs.fill", p.accent, p)
+                }
+                if let stress {
+                    row(demo.t("vitals.stress"), demo.number(stress.value) + " / 100", "brain.head.profile", p.purple, p)
+                }
+            }.accessibilityIdentifier("vitals.real")
+        }
+    }
+
+    private func row(_ title: String, _ value: String, _ symbol: String, _ color: Color, _ p: Palette) -> some View {
+        HStack {
+            Image(systemName: symbol).foregroundStyle(color).frame(width: 28)
+            Text(title).font(.subheadline)
+            Spacer()
+            Text(value).font(.subheadline.weight(.semibold))
+        }
+    }
+}
+
 /// Full-screen, searchable list of the languages the band firmware offers.
 struct BandLanguageList: View {
     @EnvironmentObject private var demo: DemoStore
@@ -293,6 +329,10 @@ struct LiveBandScreen: View {
             statusCard
             if link.phase == .connected || link.heart != nil { heartCard }
             if link.phase == .connected { detailsCard }
+            if link.sapReady {
+                secondary(demo.t("live.locate")) { link.findBand(title: demo.t("live.locate.title")) }
+                    .accessibilityIdentifier("live.locate")
+            }
             if link.hasRememberedBand { listenCard }
             logCard
         }

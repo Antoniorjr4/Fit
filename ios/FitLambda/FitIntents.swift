@@ -36,7 +36,25 @@ struct SendToBandIntent: AppIntent {
     func perform() async throws -> some IntentResult & ReturnsValue<Bool> {
         let link = BandLink.shared
         let mapped: SapNotify.Kind = kind == .message ? .message : (kind == .mail ? .mail : .other)
-        link.sendNotification(title: title.isEmpty ? (app.isEmpty ? mapped.appName : app) : title, text: message, kind: mapped, app: app)
+        // The iOS notification automation hands over one text, "sender\nmessage", often with invisible
+        // direction marks. Split it so the band shows the sender as the title and the message below.
+        func clean(_ value: String) -> String {
+            String(value.unicodeScalars.filter { ![0x200E, 0x200F, 0x202A, 0x202B, 0x202C, 0x2068, 0x2069].contains($0.value) })
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        var shownTitle = clean(title)
+        var shownText = clean(message)
+        if shownText.isEmpty || shownText == shownTitle {
+            let lines = shownTitle.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: true).map(String.init)
+            if lines.count == 2 {
+                shownTitle = lines[0]
+                shownText = lines[1]
+            } else {
+                shownText = ""
+            }
+        }
+        if shownTitle.isEmpty { shownTitle = app.isEmpty ? mapped.appName : app }
+        link.sendNotification(title: shownTitle, text: shownText, kind: mapped, app: app)
         // The app may have just been woken in the background: give the band up to 20 s to reconnect.
         var waited = 0
         while link.pendingNotifications > 0, waited < 40 {

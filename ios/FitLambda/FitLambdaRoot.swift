@@ -215,7 +215,10 @@ struct TodayScreen: View {
                         VStack(spacing: 12) { vitalCards }
                     }
                 }
-                if realDay { RealSleepCard() }
+                if realDay {
+                    RealVitalsCard()
+                    RealSleepCard()
+                }
                 Button { tab = .trends } label: {
                     Card {
                         Label(demo.t("today.insightTitle"), systemImage: "sparkles").font(.subheadline.weight(.medium))

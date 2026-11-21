@@ -182,7 +182,7 @@ enum SapHealth {
         let kind: Int
     }
     static let stageAwake = 40001, stageLight = 40002, stageDeep = 40003, stageREM = 40004
-    static let typeHeart = 10, typeSleep = 16, typeSleepStage = 17
+    static let typeHeart = 10, typeSleep = 16, typeSleepStage = 17, typeStress = 19, typeOxygen = 112
 
     /// Field width for a record of the given type: 0 = unknown field, -1 = length-prefixed blob.
     private static func vitalWidth(type: Int, id: Int) -> Int {
@@ -197,6 +197,16 @@ enum SapHealth {
             if id == 40 || id == 80 { return 4 }
             if [81, 83, 86].contains(id) { return 1 }
             return (id == 82 || id == 117) ? 16 : 0
+        case typeStress:
+            if [96, 102, 103].contains(id) { return 1 }
+            if id == 97 { return 4 }
+            return id == 98 ? -1 : 0
+        case typeOxygen:
+            if id == 117 { return 16 }
+            if (169...172).contains(id) { return 1 }
+            if id == 173 { return 2 }
+            if id == 174 { return 4 }
+            return id == 175 ? -1 : 0
         default: return 0
         }
     }
@@ -248,6 +258,19 @@ enum SapHealth {
             return HeartSample(at: healthSeconds(time), bpm: Int(bpm),
                                min: fields[33]?.first.map { Int($0) }, max: fields[34]?.first.map { Int($0) })
         }
+    }
+
+    /// Single-value readings (time -> value): stress 0-100 or blood oxygen in percent.
+    static func readings(from payload: [UInt8], type: Int) -> [Int: Int]? {
+        guard type == typeStress || type == typeOxygen,
+              let records = vitalRecords(from: payload, type: type) else { return nil }
+        var out: [Int: Int] = [:]
+        for fields in records {
+            guard let time = fields[2] ?? fields[1],
+                  let value = fields[type == typeStress ? 96 : 169]?.first, value > 0, value <= 100 else { continue }
+            out[healthSeconds(time)] = Int(value)
+        }
+        return out
     }
 
     static func sleepEpisodes(from payload: [UInt8]) -> [SleepEpisode]? {

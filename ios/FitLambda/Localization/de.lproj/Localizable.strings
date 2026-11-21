@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Visuelle Demo. Es werden keine Erinnerungen gesendet.";
 "profile.subtitle" = "Dein Rhythmus. Deine Entscheidungen.";
 "profile.title" = "Auf deine Art.";
-"profile.version" = "FitΛ 0.12.0\nEchtes Bluetooth · übrige Daten sind Beispiele";
+"profile.version" = "FitΛ 0.13.0\nEchtes Bluetooth · übrige Daten sind Beispiele";
 "profile.welcome" = "Begrüßung erneut ansehen";
 "scenarios.subtitle" = "Sieh dir an, wie FitΛ mit Situationen umgeht. Die Beispiele ändern weder dein Armband noch die iPhone-Berechtigungen.";
 "scenarios.title" = "Szenarien erkunden";
@@ -285,3 +285,8 @@
 "live.music" = "Musiksteuerung (Apple Music)";
 "live.music.note" = "Der Musikbildschirm des Bands zeigt den Titel und steuert Wiedergabe, Pause und Überspringen in der Musik-App. iOS erlaubt keine Steuerung von Spotify oder YouTube und keine Lautstärkeänderung.";
 "intent.param.app" = "Quell-App";
+"live.locate" = "Band finden (vibrieren)";
+"live.locate.title" = "Hier bin ich";
+"vitals.heartRange" = "Puls heute";
+"vitals.oxygen" = "Blutsauerstoff";
+"vitals.stress" = "Stress";

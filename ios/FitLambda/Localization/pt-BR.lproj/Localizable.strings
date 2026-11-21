@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Demonstração visual. Nenhum lembrete é enviado.";
 "profile.subtitle" = "Seu ritmo. Suas escolhas.";
 "profile.title" = "Do seu jeito.";
-"profile.version" = "FitΛ 0.12.0\nBluetooth real · demais dados de exemplo";
+"profile.version" = "FitΛ 0.13.0\nBluetooth real · demais dados de exemplo";
 "profile.welcome" = "Rever boas-vindas";
 "scenarios.subtitle" = "Veja como o FitΛ apresenta cada situação. São exemplos visuais; nada muda na sua pulseira ou nas permissões do iPhone.";
 "scenarios.title" = "Explorar cenários";
@@ -285,3 +285,8 @@
 "live.music" = "Controle de música (Apple Music)";
 "live.music.note" = "A tela de música da pulseira mostra a faixa e controla tocar, pausar e pular no app Música. O iOS não deixa um app controlar Spotify ou YouTube, nem mudar o volume.";
 "intent.param.app" = "App de origem";
+"live.locate" = "Encontrar a pulseira (vibrar)";
+"live.locate.title" = "Estou aqui";
+"vitals.heartRange" = "Batimentos hoje";
+"vitals.oxygen" = "Oxigênio no sangue";
+"vitals.stress" = "Estresse";

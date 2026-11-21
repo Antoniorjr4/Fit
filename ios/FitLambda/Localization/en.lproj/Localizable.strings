@@ -87,7 +87,7 @@
 "profile.remindersNote" = "Visual demo. No reminders are sent.";
 "profile.subtitle" = "Your rhythm. Your choices.";
 "profile.title" = "Your way.";
-"profile.version" = "FitΛ 0.12.0\nReal Bluetooth · other data is sample";
+"profile.version" = "FitΛ 0.13.0\nReal Bluetooth · other data is sample";
 "profile.welcome" = "Revisit welcome";
 "scenarios.subtitle" = "See how FitΛ handles each situation. These are visual examples; your band and iPhone permissions stay unchanged.";
 "scenarios.title" = "Explore scenarios";
@@ -285,3 +285,8 @@
 "live.music" = "Music control (Apple Music)";
 "live.music.note" = "The band’s music screen shows the track and controls play, pause and skip in the Music app. iOS does not let an app control Spotify or YouTube, or change the volume.";
 "intent.param.app" = "Source app";
+"live.locate" = "Find the band (vibrate)";
+"live.locate.title" = "Here I am";
+"vitals.heartRange" = "Heart rate today";
+"vitals.oxygen" = "Blood oxygen";
+"vitals.stress" = "Stress";
