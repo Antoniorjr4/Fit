@@ -1,0 +1,64 @@
+{
+  "version": "0.3.0",
+  "code_commit": "16ca247fa33e4600dd55be224dddc779df7ee7c3",
+  "run_url": "https://github.com/Antoniorjr4/Fit/actions/runs/43851101290",
+  "artifact_id": 14217834171,
+  "artifact_name": "FitLambda-native-ui-6",
+  "artifact_sha256": "e4288451f3ddf071c4956dd33631c9324b22b1c57b57de7d2d4e065f56dbf96b",
+  "files": [
+    {
+      "path": "today-light.png",
+      "artifact_path": "main-screenshots/BEA03A75-74F1-4584-8101-A1ABDA4BB2CF.png",
+      "sha256": "c790afa022ec8786412624072973e1cbcff1514dfd0740bd2bb47142a490b55b",
+      "bytes": 378540
+    },
+    {
+      "path": "trends-light.png",
+      "artifact_path": "main-screenshots/9F887AF0-21AA-413A-B9E5-3D57DC69F24C.png",
+      "sha256": "d121d750aa987dcf143feb431274ccd0ff3d7c425a3fb003436f64f649d2f800",
+      "bytes": 306279
+    },
+    {
+      "path": "band-dark.png",
+      "artifact_path": "main-screenshots/78680587-CC6F-4F00-B4CC-9C057DEF10E1.png",
+      "sha256": "aec659f67a2595c14cd3255cf604cd02e4b667499804e40ff20c29e58ead08c8",
+      "bytes": 455827
+    },
+    {
+      "path": "profile-light.png",
+      "artifact_path": "main-screenshots/029AA0F7-B77B-4A1D-A463-8059ABCA1467.png",
+      "sha256": "9bb7eb4e30cc72e12c6e40a7f4a453ff9a2b69e4376ad1d1f078aef0bc89ca50",
+      "bytes": 291821
+    },
+    {
+      "path": "goal-light.png",
+      "artifact_path": "main-screenshots/598E6170-DE09-485B-A543-0775A83A4FB1.png",
+      "sha256": "9d1e017b1f13c4bac239217062655da17687fed874c9a172c65fe9fa96df2ca4",
+      "bytes": 137878
+    },
+    {
+      "path": "compact-large-text.png",
+      "artifact_path": "compact-screenshots/DEBA85CF-3D90-47B5-B2E9-E4E679D34FEE.png",
+      "sha256": "f855ee607ef0a55586844f30765de6ec62d12b9e0b5a9ecc629ad838d35dfc63",
+      "bytes": 159776
+    },
+    {
+      "path": "main-summary.json",
+      "artifact_path": "main-summary.json",
+      "sha256": "058544c924bdda2728f385ed853e732ef6a6dbe23e3d506bec7cb177e83fb56e",
+      "bytes": 978
+    },
+    {
+      "path": "compact-summary.json",
+      "artifact_path": "compact-summary.json",
+      "sha256": "436ea733b4a259e9b1608df00369ed351a5bfbaf6ced7757e15e433a53234ce9",
+      "bytes": 996
+    },
+    {
+      "path": "environment.txt",
+      "artifact_path": "environment.txt",
+      "sha256": "2da99c4e231d34851066719e0bcb80821fc730717d05cff81ff8028c6a43e369",
+      "bytes": 92
+    }
+  ]
+}
